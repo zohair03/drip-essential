@@ -1,8 +1,7 @@
 "use client";
-
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useProducts } from "../context/ProductContext";
+import { useProducts, defaultFeaturedBrands } from "../context/ProductContext";
 import { ResponsiveImage } from "./ResponsiveImage";
 
 export function BrandCategoriesSection() {
@@ -12,22 +11,19 @@ export function BrandCategoriesSection() {
   const brands =
     featuredBrands && featuredBrands.length > 0
       ? featuredBrands
-          .filter((b) => b.isVisible)
-          .sort((a, b) => a.order - b.order)
+          .filter((b) => b.isVisible !== false)
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
           .map((b) => ({
+            id: b.id,
             name: b.name,
-            image: b.logoUrl,
+            slug: b.slug || b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            image: b.image || b.logoUrl || "/images/image.png",
           }))
-      : [
-          { name: "ROLEX", image: "/images/image.png" },
-          { name: "OMEGA", image: "/images/image.png" },
-          { name: "TAG HEUER", image: "/images/image.png" },
-          { name: "TUDOR", image: "/images/image.png" },
-          { name: "RADO", image: "/images/image.png" },
-          { name: "LOUIS ERARD", image: "/images/image.png" },
-          { name: "G-SHOCK", image: "/images/image.png" },
-          { name: "FOSSIL", image: "/images/image.png" },
-        ];
+      : defaultFeaturedBrands.map((b) => ({
+          name: b.name,
+          slug: b.slug,
+          image: b.image || b.logoUrl,
+        }));
 
   return (
     <section className="py-20 bg-white">
@@ -49,9 +45,9 @@ export function BrandCategoriesSection() {
           >
             {brands.map((brand, index) => (
               <motion.div
-                key={brand.name}
+                key={brand.id || brand.slug || brand.name}
                 onClick={() =>
-                  router.push(`/watches/${brand.name.toLowerCase()}`)
+                  router.push(`/watches/${(brand.slug || brand.name).toLowerCase()}`)
                 }
                 className="group cursor-pointer flex-shrink-0 flex flex-col items-center justify-between bg-white w-[280px]"
                 initial={{ opacity: 0, x: 50 }}
@@ -62,13 +58,13 @@ export function BrandCategoriesSection() {
                 }}
                 viewport={{ once: true }}
               >
-                <div className="w-full h-[220px] flex items-center justify-center overflow-hidden mb-6">
+                <div className="w-full h-[220px] flex items-center justify-center overflow-hidden mb-6 p-4">
                   <ResponsiveImage
-                    src= "/images/image.png"
-                    alt="image"
+                    src={brand.image || "/images/image.png"}
+                    alt={brand.name}
                     widths={[150, 300, 500]}
                     sizes="(max-width: 768px) 150px, 300px"
-                    className="max-w-[95%] max-h-[95%] object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
+                    className="max-w-[90%] max-h-[90%] object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
 
