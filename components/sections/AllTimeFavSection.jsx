@@ -6,22 +6,13 @@ import { useProducts } from "../context/ProductContext";
 import { ResponsiveImage } from "./ResponsiveImage";
 
 export default function AllTimeFavourites() {
-  const { products, featuredBestsellers } = useProducts();
+  const { products, bestsellerWatches } = useProducts();
   const router = useRouter();
 
-  // Get up to 8 active products for favourites (bestsellers) managed by admin
-  const activeBestsellers =
-    featuredBestsellers && featuredBestsellers.length > 0
-      ? featuredBestsellers
-          .filter((b) => b.isVisible)
-          .sort((a, b) => a.order - b.order)
-          .map((b) => products.find((p) => p.id === b.productId))
-          .filter((p) => !!p && p.status !== "Draft")
-      : [];
-
+  // Curated best-selling watches managed by admin, or fallback to active products
   const favourites =
-    activeBestsellers.length > 0
-      ? activeBestsellers.slice(0, 8)
+    bestsellerWatches && bestsellerWatches.length > 0
+      ? bestsellerWatches.filter((p) => p.status !== "Draft").slice(0, 8)
       : products.filter((p) => p.status !== "Draft").slice(0, 8);
 
   return (

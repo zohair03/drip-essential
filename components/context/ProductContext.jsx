@@ -198,13 +198,17 @@ const ProductContext = createContext(undefined);
 export function ProductProvider({ children }) {
   const [products, setProducts] = useState(defaultProducts);
   const [featuredBrands, setFeaturedBrands] = useState(defaultFeaturedBrands);
+  const [showcaseWatches, setShowcaseWatches] = useState([]);
+  const [bestsellerWatches, setBestsellerWatches] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
-      const [productsRes, brandsRes] = await Promise.all([
+      const [productsRes, brandsRes, showcaseRes, bestsellersRes] = await Promise.all([
         fetch("/api/products?limit=200", { cache: "no-store" }).catch(() => null),
         fetch("/api/brands", { cache: "no-store" }).catch(() => null),
+        fetch("/api/showcase", { cache: "no-store" }).catch(() => null),
+        fetch("/api/bestsellers", { cache: "no-store" }).catch(() => null),
       ]);
 
       if (productsRes && productsRes.ok) {
@@ -218,6 +222,20 @@ export function ProductProvider({ children }) {
         const bData = await brandsRes.json();
         if (bData?.success && Array.isArray(bData.brands) && bData.brands.length > 0) {
           setFeaturedBrands(bData.brands.map(formatApiBrand));
+        }
+      }
+
+      if (showcaseRes && showcaseRes.ok) {
+        const sData = await showcaseRes.json();
+        if (sData?.success && Array.isArray(sData.items) && sData.items.length > 0) {
+          setShowcaseWatches(sData.items.map((it) => formatApiProduct(it.product)));
+        }
+      }
+
+      if (bestsellersRes && bestsellersRes.ok) {
+        const bsData = await bestsellersRes.json();
+        if (bsData?.success && Array.isArray(bsData.items) && bsData.items.length > 0) {
+          setBestsellerWatches(bsData.items.map((it) => formatApiProduct(it.product)));
         }
       }
     } catch (e) {
@@ -259,6 +277,9 @@ export function ProductProvider({ children }) {
       value={{
         products,
         featuredBrands,
+        showcaseWatches,
+        bestsellerWatches,
+        featuredBestsellers: bestsellerWatches,
         addProduct,
         updateProduct,
         deleteProduct,

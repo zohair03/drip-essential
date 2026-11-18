@@ -7,12 +7,13 @@ import { ResponsiveImage } from "./ResponsiveImage";
 
 export default function WatchShowcase() {
   const router = useRouter();
-  const { products } = useProducts();
+  const { products, showcaseWatches } = useProducts();
 
-  // Show the first 8 active products in the showcase
-  const displayWatches = products
-    .filter((p) => p.status !== "Draft")
-    .slice(0, 8);
+  // Show curated showcase watches managed by admin, or fallback to active products
+  const displayWatches =
+    showcaseWatches && showcaseWatches.length > 0
+      ? showcaseWatches.filter((p) => p.status !== "Draft").slice(0, 8)
+      : products.filter((p) => p.status !== "Draft").slice(0, 8);
 
   return (
     <section id="watches" className="py-10 md:py-20 bg-white">

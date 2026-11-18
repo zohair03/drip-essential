@@ -12,6 +12,8 @@ import {
   LogOut,
   ExternalLink,
   X,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
 export default function AdminSidebar({
@@ -51,6 +53,18 @@ export default function AdminSidebar({
       href: "/admin/products/add",
       icon: PlusCircle,
       exact: true,
+    },
+    {
+      label: "Watch Showcase",
+      href: "/admin/showcase",
+      icon: Sparkles,
+      exact: false,
+    },
+    {
+      label: "Best Sellers",
+      href: "/admin/bestsellers",
+      icon: TrendingUp,
+      exact: false,
     },
     {
       label: "Brands",

@@ -15,6 +15,8 @@ export default function AdminNavbar({
     if (pathname === "/admin/products") return "Watch Inventory";
     if (pathname === "/admin/products/add") return "Add New Watch";
     if (pathname?.startsWith("/admin/products/edit")) return "Edit Watch";
+    if (pathname === "/admin/showcase") return "Watch Showcase Management";
+    if (pathname === "/admin/bestsellers") return "Best Sellers Management";
     if (pathname === "/admin/brands") return "Brand Management";
     if (pathname === "/admin/brands/add") return "Create New Brand";
     if (pathname?.startsWith("/admin/brands/edit")) return "Edit Brand";
