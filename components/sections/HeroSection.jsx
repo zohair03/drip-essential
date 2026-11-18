@@ -1,47 +1,27 @@
 "use client";
 import { motion } from "motion/react";
 import { Truck, ShieldCheck, Package } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function HeroSection() {
-  const navigate = useRouter();
-
   return (
     <div className="flex flex-col min-h-screen justify-between bg-white overflow-hidden relative">
       
       {/* Background Image Container */}
       <div 
-        className="absolute inset-0 z-0 bg-[url('/images/hero-image.webp')] md:bg-[url('/images/hero-image.webp')] bg-cover bg-center md:bg-top pointer-events-none"
+        className="absolute inset-0 z-0 bg-[url('/images/mobilehero.webp')] md:bg-[url('/images/hero-image.webp')] bg-cover bg-center md:bg-top pointer-events-none"
       />
 
-      {/* Top spacer to push content below the absolute header (desktop only, mobile content is absolute) */}
-      <div className="hidden md:block h-28 md:h-32" />
+      {/* Top spacer to push content below the absolute header */}
+      <div className="h-24 sm:h-28 md:h-32 shrink-0" />
 
-      {/* MOBILE-ONLY: Shop Call to Action Button */}
-      <div className="md:hidden absolute top-[48%] left-4 z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <button
-            onClick={() => navigate('/watches')}
-            className="bg-[#b38a5c] hover:bg-[#9c754a] text-white text-[8px] font-bold tracking-widest uppercase py-2.5 px-4 transition-all flex items-center gap-2 w-fit shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.02] transform duration-300"
-          >
-            Shop Collection <span className="text-[9px]">→</span>
-          </button>
-        </motion.div>
-      </div>
-
-      {/* DESKTOP-ONLY: Hero Typography & Content Overlay */}
-      <div className="hidden md:flex flex-grow flex-col justify-center relative z-10 px-6 md:pl-20 lg:pl-[12%] py-8 md:py-12">
+      {/* Hero Typography & Content Overlay */}
+      <div className="flex flex-grow flex-col justify-center relative z-10 px-6 sm:px-10 md:pl-20 lg:pl-[12%] py-8 md:py-12">
         <div className="space-y-4 md:space-y-6 max-w-xl md:max-w-2xl">
           
-
-
           {/* Main Title */}
           <motion.h1 
-            className="font-serif font-normal md:text-[4.5rem] lg:text-[5.5rem] leading-[1.08] text-[#111111]"
+            className="font-serif font-normal text-3xl sm:text-4xl md:text-5xl lg:text-[5.5rem] leading-[1.12] md:leading-[1.08] text-[#111111]"
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
@@ -51,7 +31,7 @@ export default function HeroSection() {
 
           {/* Body Subtitle */}
           <motion.p 
-            className="text-base text-gray-700 max-w-md leading-relaxed font-sans font-medium"
+            className="text-xs sm:text-sm md:text-base text-gray-700 max-w-xs sm:max-w-sm md:max-w-md leading-relaxed font-sans font-medium"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -63,17 +43,17 @@ export default function HeroSection() {
 
         {/* Shop Call to Action Button */}
         <motion.div
-          className="mt-10"
+          className="mt-6 sm:mt-8 md:mt-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <button
-            onClick={() => navigate('/watches')}
-            className="bg-[#b38a5c] hover:bg-[#9c754a] text-white text-xs font-bold tracking-widest uppercase py-4.5 px-10 transition-all flex items-center gap-3 w-fit shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.02] transform duration-300"
+          <Link
+            href="/watches"
+            className="bg-[#b38a5c] hover:bg-[#9c754a] text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase py-3.5 px-7 sm:py-4 sm:px-8 md:py-4.5 md:px-10 transition-all inline-flex items-center gap-2.5 sm:gap-3 w-fit shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.02] transform duration-300"
           >
-            Shop Collection <span className="text-sm">→</span>
-          </button>
+            Shop Collection <span className="text-xs sm:text-sm">→</span>
+          </Link>
         </motion.div>
       </div>
 

@@ -163,9 +163,9 @@ export default function Navbar({ theme = "light" }) {
               )}
             </button>
 
-            {/* Desktop Navigation Links */}
+            {/* Desktop Navigation Links (Hidden on mobile & tablet, visible on lg+) */}
             <div
-              className={`hidden md:flex items-center gap-8 font-sans text-[11px] font-bold tracking-widest uppercase ${
+              className={`hidden lg:flex items-center gap-8 font-sans text-[11px] font-bold tracking-widest uppercase ${
                 isDark ? "text-white" : "text-black"
               }`}
             >
