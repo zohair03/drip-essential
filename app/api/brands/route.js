@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { z } from "zod";
 import connectDB from "@/lib/mongodb";
-import Brand from "@/lib/models/Brand";
+import Brand, { generateSlug } from "@/lib/models/Brand";
 import Product from "@/lib/models/Product";
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 
@@ -78,9 +78,14 @@ export async function POST(request) {
 
     await connectDB();
 
-    // Check if brand with same name already exists
+    const slug = generateSlug(parsed.data.name);
+
+    // Check if brand with same name or slug already exists
     const existing = await Brand.findOne({
-      name: { $regex: new RegExp(`^${parsed.data.name}$`, "i") },
+      $or: [
+        { name: { $regex: new RegExp(`^${parsed.data.name}$`, "i") } },
+        { slug },
+      ],
     });
     if (existing) {
       return NextResponse.json(
@@ -89,7 +94,10 @@ export async function POST(request) {
       );
     }
 
-    const brand = await Brand.create(parsed.data);
+    const brand = await Brand.create({
+      ...parsed.data,
+      slug,
+    });
 
     return NextResponse.json(
       {

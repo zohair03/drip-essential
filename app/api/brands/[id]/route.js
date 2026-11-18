@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { z } from "zod";
 import connectDB from "@/lib/mongodb";
-import Brand from "@/lib/models/Brand";
+import Brand, { generateSlug } from "@/lib/models/Brand";
 import Product from "@/lib/models/Product";
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { deleteCloudinaryImage } from "@/lib/cloudinary";
@@ -91,11 +91,15 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // If changing name, check if duplicate exists
+    // If changing name, check if duplicate exists and update slug
     if (parsed.data.name && parsed.data.name !== existing.name) {
+      const newSlug = generateSlug(parsed.data.name);
       const duplicate = await Brand.findOne({
         _id: { $ne: id },
-        name: { $regex: new RegExp(`^${parsed.data.name}$`, "i") },
+        $or: [
+          { name: { $regex: new RegExp(`^${parsed.data.name}$`, "i") } },
+          { slug: newSlug },
+        ],
       });
       if (duplicate) {
         return NextResponse.json(
@@ -103,6 +107,7 @@ export async function PUT(request, { params }) {
           { status: 400 }
         );
       }
+      existing.slug = newSlug;
     }
 
     // If replacing brand image, delete old one from Cloudinary
