@@ -1,0 +1,240 @@
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { z } from "zod";
+import connectDB from "@/lib/mongodb";
+import Product from "@/lib/models/Product";
+import Brand from "@/lib/models/Brand";
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+
+const productCreateSchema = z.object({
+  name: z.string().min(1, "Product name is required").trim(),
+  brand: z.string().min(1, "Brand is required"),
+  description: z.string().optional().default(""),
+  price: z.coerce.number().min(0, "Price must be a positive number"),
+  stock: z.coerce.number().int().min(0, "Stock cannot be negative").default(0),
+  image: z.string().optional().default(""),
+  imagePublicId: z.string().optional().default(""),
+  images: z.array(z.string()).optional().default([]),
+  imagePublicIds: z.array(z.string()).optional().default([]),
+  status: z.enum(["Active", "Draft"]).optional().default("Active"),
+});
+
+export async function GET(request) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+
+    const search = searchParams.get("search")?.trim();
+    const brandParam = searchParams.get("brand")?.trim();
+    const statusParam = searchParams.get("status")?.trim();
+    const sortParam = searchParams.get("sort") || "featured";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
+
+    const admin = await getAuthenticatedAdmin(request);
+
+    // Query filter
+    const query = {};
+
+    // Status filter: Public can ONLY see Active products
+    if (admin && statusParam) {
+      if (statusParam === "all") {
+        // no status constraint for admin
+      } else {
+        query.status = statusParam;
+      }
+    } else if (admin && searchParams.get("admin") === "true") {
+      // Admin dashboard requesting all products
+    } else {
+      query.status = "Active";
+    }
+
+    // Brand filter
+    if (brandParam) {
+      if (mongoose.Types.ObjectId.isValid(brandParam)) {
+        query.brand = brandParam;
+      } else {
+        // Find brand by name or slug
+        const brandDoc = await Brand.findOne({
+          $or: [
+            { name: { $regex: new RegExp(`^${brandParam}$`, "i") } },
+            { slug: brandParam.toLowerCase() },
+          ],
+        });
+        if (brandDoc) {
+          query.brand = brandDoc._id;
+        } else {
+          // No such brand
+          return NextResponse.json({
+            success: true,
+            products: [],
+            total: 0,
+            page,
+            pages: 0,
+          });
+        }
+      }
+    }
+
+    // Search filter
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Sort order
+    let sortObj = { createdAt: -1 };
+    if (sortParam === "price-low") {
+      sortObj = { price: 1 };
+    } else if (sortParam === "price-high") {
+      sortObj = { price: -1 };
+    } else if (sortParam === "newest") {
+      sortObj = { createdAt: -1 };
+    }
+
+    const total = await Product.countDocuments(query);
+    const skip = (page - 1) * limit;
+
+    const products = await Product.find(query)
+      .populate("brand", "name slug image")
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const serialized = products.map((p) => {
+      const brandObj = p.brand;
+      const brandName = typeof brandObj === "object" && brandObj !== null
+        ? brandObj.name
+        : "UNKNOWN";
+
+      return {
+        ...p,
+        id: p._id.toString(),
+        _id: undefined,
+        __v: undefined,
+        brand: brandName,
+        brandId: typeof brandObj === "object" && brandObj !== null
+          ? brandObj._id?.toString()
+          : String(p.brand),
+        brandData: typeof brandObj === "object" ? brandObj : null,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      products: serialized,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    console.error("Products GET error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch products" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request) {
+  try {
+    const admin = await getAuthenticatedAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const parsed = productCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    // Verify brand exists
+    let brandId = parsed.data.brand;
+    if (!mongoose.Types.ObjectId.isValid(brandId)) {
+      // Try lookup by name
+      const brandDoc = await Brand.findOne({
+        name: { $regex: new RegExp(`^${brandId}$`, "i") },
+      });
+      if (!brandDoc) {
+        return NextResponse.json(
+          { success: false, error: "Selected brand does not exist" },
+          { status: 400 }
+        );
+      }
+      brandId = brandDoc._id;
+    } else {
+      const exists = await Brand.findById(brandId);
+      if (!exists) {
+        return NextResponse.json(
+          { success: false, error: "Selected brand does not exist" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Ensure main image is synced with images array
+    let mainImage = parsed.data.image;
+    let mainPublicId = parsed.data.imagePublicId;
+    const imagesList = Array.isArray(parsed.data.images) ? [...parsed.data.images] : [];
+    const publicIdsList = Array.isArray(parsed.data.imagePublicIds) ? [...parsed.data.imagePublicIds] : [];
+
+    if (!mainImage && imagesList.length > 0) {
+      mainImage = imagesList[0];
+      mainPublicId = publicIdsList[0] || "";
+    }
+    if (mainImage && !imagesList.includes(mainImage)) {
+      imagesList.unshift(mainImage);
+      if (mainPublicId && !publicIdsList.includes(mainPublicId)) {
+        publicIdsList.unshift(mainPublicId);
+      }
+    }
+
+    const product = await Product.create({
+      ...parsed.data,
+      brand: brandId,
+      image: mainImage,
+      imagePublicId: mainPublicId,
+      images: imagesList,
+      imagePublicIds: publicIdsList,
+    });
+
+    const populated = await Product.findById(product._id)
+      .populate("brand", "name slug image")
+      .lean();
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Product created successfully",
+        product: {
+          ...populated,
+          id: populated._id.toString(),
+          _id: undefined,
+          __v: undefined,
+          brand: populated.brand?.name || "UNKNOWN",
+          brandId: populated.brand?._id?.toString() || String(populated.brand),
+          brandData: populated.brand,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Product create error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to create product" },
+      { status: 500 }
+    );
+  }
+}
