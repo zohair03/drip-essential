@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   Heart,
@@ -7,87 +7,268 @@ import {
   Search,
   ArrowUpDown,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { ResponsiveImage } from "../sections/ResponsiveImage";
-import {WatchesCollectionNavbar} from "../ui/WatchesCollectionNavbar.jsx"
+import { WatchesCollectionNavbar } from "../ui/WatchesCollectionNavbar.jsx";
 
+const ITEMS_PER_PAGE = 12;
+
+function formatApiProduct(p) {
+  const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
+  const rawPrice = p.price ? String(p.price).replace(/,/g, "") : "0";
+  const formattedPrice = !isNaN(Number(rawPrice))
+    ? new Intl.NumberFormat("en-IN").format(Number(rawPrice))
+    : String(p.price || "0");
+
+  const brandName =
+    typeof p.brand === "object" && p.brand !== null
+      ? p.brand.name || "UNKNOWN"
+      : p.brand || "UNKNOWN";
+
+  const image = p.image || "/images/image.png";
+  const images =
+    Array.isArray(p.images) && p.images.length > 0 ? p.images : [image];
+
+  return {
+    id: String(p.id || p._id || Date.now()),
+    brand: brandName.toUpperCase(),
+    brandId: p.brandId || (typeof p.brand === "object" ? p.brand?._id : "") || "",
+    name: p.name || "Product",
+    modelId: p.modelId || "N/A",
+    price: formattedPrice,
+    rawPrice: Number(rawPrice) || 0,
+    image,
+    imagePublicId: p.imagePublicId || "",
+    images,
+    imagePublicIds: p.imagePublicIds || [],
+    description: p.description || "",
+    stock,
+    status:
+      p.status || (stock > 5 ? "Active" : stock > 0 ? "Low Stock" : "Draft"),
+    store_type: p.store_type || "watches",
+  };
+}
 
 export default function WatchesCollectionPage() {
   const { brandName } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const gridTopRef = useRef(null);
 
-  const { products } = useProducts();
+  const { featuredBrands } = useProducts();
 
-  // Scroll to top on mount or when route changes
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [brandName]);
-
-  // Active products only
-  const activeProducts = useMemo(
-    () => products.filter((p) => p.status !== "Draft"),
-    [products]
-  );
-
-  // Available brands in database dynamically
+  // Dynamic brands list from database
   const availableBrands = useMemo(() => {
-    const brandsSet = new Set();
-
-    activeProducts.forEach((p) => {
-      if (p.brand) {
-        brandsSet.add(p.brand.toUpperCase());
-      }
-    });
-
-    return Array.from(brandsSet);
-  }, [activeProducts]);
+    if (featuredBrands && featuredBrands.length > 0) {
+      return featuredBrands.map((b) => b.name.toUpperCase());
+    }
+    return [
+      "ROLEX",
+      "OMEGA",
+      "TAG HEUER",
+      "TUDOR",
+      "RADO",
+      "LOUIS ERARD",
+      "G-SHOCK",
+      "FOSSIL",
+      "SEIKO",
+    ];
+  }, [featuredBrands]);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [availability, setAvailability] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
   const [selectedStrapTypes, setSelectedStrapTypes] = useState([]);
   const [selectedColours, setSelectedColours] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 500000]);
+  const [debouncedPriceRange, setDebouncedPriceRange] = useState([0, 500000]);
   const [sortBy, setSortBy] = useState("featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // Pagination States (12 watches per page, strictly database-driven)
   const [currentPage, setCurrentPage] = useState(1);
+  const [paginatedProducts, setPaginatedProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const ITEMS_PER_PAGE = 20;
-
-  // Sync route parameters and search query params
+  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (brandName) {
-        setSelectedBrands([brandName.toUpperCase()]);
-      } else {
-        setSelectedBrands([]);
-      }
-
-      const query = searchParams.get("search");
-
-      if (query) {
-        setSearchQuery(query);
-      } else {
-        setSearchQuery("");
-      }
-    }, 0);
-
+      setDebouncedSearch(searchQuery);
+    }, 350);
     return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Debounce price slider
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPriceRange(priceRange);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [priceRange]);
+
+  // Sync route parameters & URL search query on load or route change
+  useEffect(() => {
+    if (brandName) {
+      setSelectedBrands([brandName.toUpperCase()]);
+    } else {
+      setSelectedBrands([]);
+    }
+
+    const query = searchParams.get("search");
+    if (query) {
+      setSearchQuery(query);
+      setDebouncedSearch(query);
+    } else {
+      setSearchQuery("");
+      setDebouncedSearch("");
+    }
+    setCurrentPage(1);
   }, [brandName, searchParams]);
+
+  // Reset page to 1 whenever any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    debouncedSearch,
+    selectedBrands,
+    availability,
+    debouncedPriceRange,
+    sortBy,
+    selectedMaterials,
+    selectedStrapTypes,
+    selectedColours,
+  ]);
+
+  // Fetch only the active page's 12 watches from the database
+  const fetchWatches = useCallback(async (pageToFetch = 1) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(pageToFetch));
+      params.set("limit", String(ITEMS_PER_PAGE));
+      if (sortBy) params.set("sort", sortBy);
+      if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+
+      const brandsToQuery =
+        selectedBrands.length > 0
+          ? selectedBrands
+          : brandName
+          ? [brandName.toUpperCase()]
+          : [];
+
+      if (brandsToQuery.length > 0) {
+        params.set("brand", brandsToQuery.join(","));
+      }
+
+      if (debouncedPriceRange[0] > 0) {
+        params.set("minPrice", String(debouncedPriceRange[0]));
+      }
+      if (debouncedPriceRange[1] < 500000) {
+        params.set("maxPrice", String(debouncedPriceRange[1]));
+      }
+
+      if (availability.length === 1) {
+        params.set("availability", availability[0]);
+      }
+
+      const res = await fetch(`/api/products?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+
+      if (data && data.success) {
+        let items = Array.isArray(data.products)
+          ? data.products.map(formatApiProduct)
+          : [];
+
+        // Apply secondary client-side description filters if set
+        if (selectedMaterials.length > 0) {
+          items = items.filter((p) => {
+            const desc = (p.description || "").toLowerCase();
+            return selectedMaterials.some((m) => desc.includes(m.toLowerCase()));
+          });
+        }
+        if (selectedStrapTypes.length > 0) {
+          items = items.filter((p) => {
+            const desc = (p.description || "").toLowerCase();
+            return selectedStrapTypes.some((s) => desc.includes(s.toLowerCase()));
+          });
+        }
+        if (selectedColours.length > 0) {
+          items = items.filter((p) => {
+            const desc = (p.description || "").toLowerCase();
+            const name = (p.name || "").toLowerCase();
+            return selectedColours.some(
+              (c) => desc.includes(c.toLowerCase()) || name.includes(c.toLowerCase())
+            );
+          });
+        }
+
+        setPaginatedProducts(items);
+        setTotalProducts(data.total || 0);
+        setTotalPages(data.pages || 1);
+      } else {
+        setPaginatedProducts([]);
+        setTotalProducts(0);
+        setTotalPages(1);
+      }
+    } catch (err) {
+      console.error("WatchesCollection fetch error:", err);
+      setPaginatedProducts([]);
+      setTotalProducts(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    debouncedSearch,
+    selectedBrands,
+    brandName,
+    debouncedPriceRange,
+    availability,
+    sortBy,
+    selectedMaterials,
+    selectedStrapTypes,
+    selectedColours,
+  ]);
+
+  // Execute fetch when currentPage or query params change
+  useEffect(() => {
+    fetchWatches(currentPage);
+  }, [fetchWatches, currentPage]);
+
+  // Page change handler with smooth scrolling
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage || isLoading) {
+      return;
+    }
+    setCurrentPage(newPage);
+    if (gridTopRef.current) {
+      const topOffset =
+        gridTopRef.current.getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: Math.max(0, topOffset), behavior: "smooth" });
+    }
+  };
 
   // Reset filters
   const resetFilters = () => {
     setSearchQuery("");
+    setDebouncedSearch("");
     setSelectedBrands(brandName ? [brandName.toUpperCase()] : []);
     setAvailability([]);
     setSelectedMaterials([]);
     setSelectedStrapTypes([]);
     setSelectedColours([]);
     setPriceRange([0, 500000]);
+    setDebouncedPriceRange([0, 500000]);
     setSortBy("featured");
     setCurrentPage(1);
   };
@@ -97,133 +278,11 @@ export default function WatchesCollectionPage() {
     return parseFloat(String(priceStr).replace(/,/g, "")) || 0;
   };
 
-  // Filtered Products
-  const filteredProducts = useMemo(() => {
-    return activeProducts.filter((p) => {
-      // 1. Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-
-        const matchesName = p.name.toLowerCase().includes(query);
-        const matchesBrand = p.brand.toLowerCase().includes(query);
-        const matchesDesc = p.description.toLowerCase().includes(query);
-
-        if (!matchesName && !matchesBrand && !matchesDesc) {
-          return false;
-        }
-      }
-
-      // 2. Brand filter
-      if (selectedBrands.length > 0) {
-        if (!selectedBrands.includes(p.brand.toUpperCase())) {
-          return false;
-        }
-      }
-
-      // 3. Availability filter
-      if (availability.length > 0) {
-        const inStock = p.stock > 0;
-
-        if (availability.includes("in-stock") && !inStock) {
-          return false;
-        }
-
-        if (availability.includes("out-of-stock") && inStock) {
-          return false;
-        }
-      }
-
-      // 4. Material filter
-      if (selectedMaterials.length > 0) {
-        const desc = p.description.toLowerCase();
-
-        const matchesMaterial = selectedMaterials.some((m) =>
-          desc.includes(m.toLowerCase())
-        );
-
-        if (!matchesMaterial) {
-          return false;
-        }
-      }
-
-      // 5. Strap Type filter
-      if (selectedStrapTypes.length > 0) {
-        const desc = p.description.toLowerCase();
-
-        const matchesStrap = selectedStrapTypes.some((s) =>
-          desc.includes(s.toLowerCase())
-        );
-
-        if (!matchesStrap) {
-          return false;
-        }
-      }
-
-      // 6. Colour filter
-      if (selectedColours.length > 0) {
-        const desc = p.description.toLowerCase();
-        const name = p.name.toLowerCase();
-
-        const matchesColour = selectedColours.some(
-          (c) =>
-            desc.includes(c.toLowerCase()) ||
-            name.includes(c.toLowerCase())
-        );
-
-        if (!matchesColour) {
-          return false;
-        }
-      }
-
-      // 7. Price Filter
-      const price = getProductPrice(p.price);
-
-      if (price < priceRange[0] || price > priceRange[1]) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [
-    activeProducts,
-    searchQuery,
-    selectedBrands,
-    availability,
-    selectedMaterials,
-    selectedStrapTypes,
-    selectedColours,
-    priceRange,
-  ]);
-
-  // Sorted Products
-  const sortedProducts = useMemo(() => {
-    const list = [...filteredProducts];
-
-    if (sortBy === "price-low") {
-      list.sort(
-        (a, b) => getProductPrice(a.price) - getProductPrice(b.price)
-      );
-    } else if (sortBy === "price-high") {
-      list.sort(
-        (a, b) => getProductPrice(b.price) - getProductPrice(a.price)
-      );
-    } else if (sortBy === "newest") {
-      list.reverse();
-    }
-
-    return list;
-  }, [filteredProducts, sortBy]);
-
-  // Show all products without pagination
-  const paginatedProducts = sortedProducts;
-
-  // Handle brand filter
+  // Handle brand filter toggle
   const handleBrandToggle = (brand) => {
     if (selectedBrands.includes(brand)) {
       const updated = selectedBrands.filter((b) => b !== brand);
-
       setSelectedBrands(updated);
-
       if (brandName && brandName.toUpperCase() === brand) {
         router.push("/watches");
       }
@@ -250,25 +309,50 @@ export default function WatchesCollectionPage() {
     }
   };
 
+  // Smart Pagination numbers generator
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (currentPage > 3) {
+        pages.push("...");
+      }
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) {
+        pages.push("...");
+      }
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [totalPages, currentPage]);
+
   return (
     <div className="min-h-screen bg-white text-black font-['Montserrat',sans-serif]">
+      <WatchesCollectionNavbar theme="dark" />
 
-        <WatchesCollectionNavbar theme="dark" />
       {/* Toolbar / Search & Sort */}
-      <div className="border-b border-gray-200 bg-white py-6">
+      <div ref={gridTopRef} className="border-b border-gray-200 bg-white py-6">
         <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Mobile Filter Button & Filter Count */}
           <div className="flex items-center gap-4 w-full md:w-auto">
             <button
               onClick={() => setIsMobileFilterOpen(true)}
-              className="lg:hidden flex items-center gap-2 border border-black px-4 py-2.5 text-xs font-bold tracking-widest uppercase hover:bg-black hover:text-white transition-all"
+              className="lg:hidden flex items-center gap-2 border border-black px-4 py-2.5 text-xs font-bold tracking-widest uppercase hover:bg-black hover:text-white transition-all cursor-pointer"
             >
               <SlidersHorizontal size={16} />
               Filters
             </button>
 
             <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">
-              {sortedProducts.length} Timepieces Found
+              {isLoading ? "Loading..." : `${totalProducts} Timepieces Found`}
             </span>
           </div>
 
@@ -282,20 +366,26 @@ export default function WatchesCollectionPage() {
                 placeholder="SEARCH WATCHES..."
                 className="w-full bg-[#F3F3F3] border-none text-xs font-semibold tracking-widest placeholder-gray-400 py-3 pl-10 pr-4 rounded-sm focus:outline-none focus:ring-1 focus:ring-black uppercase"
               />
-
               <Search
-                size={14}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
-            <div className="relative flex items-center border border-gray-200 rounded-sm bg-white px-3 py-2.5">
-              <ArrowUpDown size={14} className="text-gray-500 mr-2" />
-
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+              <ArrowUpDown size={14} className="text-gray-400" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold tracking-widest uppercase focus:outline-none cursor-pointer pr-4"
+                className="bg-transparent text-xs font-semibold tracking-widest uppercase focus:outline-none cursor-pointer py-1"
               >
                 <option value="featured">Featured</option>
                 <option value="price-low">Price Low to High</option>
@@ -320,7 +410,7 @@ export default function WatchesCollectionPage() {
 
               <button
                 onClick={resetFilters}
-                className="text-[10px] font-bold tracking-widest text-red-500 uppercase hover:underline"
+                className="text-[10px] font-bold tracking-widest text-red-500 uppercase hover:underline cursor-pointer"
               >
                 Clear All
               </button>
@@ -342,7 +432,7 @@ export default function WatchesCollectionPage() {
                       type="checkbox"
                       checked={selectedBrands.includes(brand)}
                       onChange={() => handleBrandToggle(brand)}
-                      className="w-4 h-4 text-black focus:ring-black border-gray-300 rounded accent-black"
+                      className="w-4 h-4 text-black focus:ring-black border-gray-300 rounded accent-black cursor-pointer"
                     />
                     {brand}
                   </label>
@@ -362,7 +452,6 @@ export default function WatchesCollectionPage() {
                     <span className="block text-[9px] text-gray-400 mb-1">
                       MIN PRICE
                     </span>
-
                     <input
                       type="number"
                       value={priceRange[0]}
@@ -380,7 +469,6 @@ export default function WatchesCollectionPage() {
                     <span className="block text-[9px] text-gray-400 mb-1">
                       MAX PRICE
                     </span>
-
                     <input
                       type="number"
                       value={priceRange[1]}
@@ -402,12 +490,9 @@ export default function WatchesCollectionPage() {
                   step={5000}
                   value={priceRange[1]}
                   onChange={(e) =>
-                    setPriceRange([
-                      priceRange[0],
-                      parseInt(e.target.value),
-                    ])
+                    setPriceRange([priceRange[0], parseInt(e.target.value)])
                   }
-                  className="w-full accent-black"
+                  className="w-full accent-black cursor-pointer"
                 />
               </div>
             </div>
@@ -424,7 +509,7 @@ export default function WatchesCollectionPage() {
                     type="checkbox"
                     checked={availability.includes("in-stock")}
                     onChange={() => handleAvailabilityToggle("in-stock")}
-                    className="w-4 h-4 text-black focus:ring-black rounded accent-black"
+                    className="w-4 h-4 text-black focus:ring-black rounded accent-black cursor-pointer"
                   />
                   In Stock
                 </label>
@@ -434,7 +519,7 @@ export default function WatchesCollectionPage() {
                     type="checkbox"
                     checked={availability.includes("out-of-stock")}
                     onChange={() => handleAvailabilityToggle("out-of-stock")}
-                    className="w-4 h-4 text-black focus:ring-black rounded accent-black"
+                    className="w-4 h-4 text-black focus:ring-black rounded accent-black cursor-pointer"
                   />
                   Out of Stock
                 </label>
@@ -448,7 +533,7 @@ export default function WatchesCollectionPage() {
               </h3>
 
               <div className="space-y-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
-                {["Oystersteel", "Leather", "Rubber", "Steel"].map((strap) => (
+                {["Leather", "Metal", "Rubber", "Fabric"].map((strap) => (
                   <label
                     key={strap}
                     className="flex items-center gap-3 cursor-pointer hover:text-black"
@@ -463,7 +548,7 @@ export default function WatchesCollectionPage() {
                           strap
                         )
                       }
-                      className="w-4 h-4 text-black rounded accent-black"
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
                     {strap}
                   </label>
@@ -478,7 +563,7 @@ export default function WatchesCollectionPage() {
               </h3>
 
               <div className="space-y-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
-                {["Ceramic", "Gold", "Titanium", "Oystersteel"].map((mat) => (
+                {["Steel", "Gold", "Ceramic", "Titanium"].map((mat) => (
                   <label
                     key={mat}
                     className="flex items-center gap-3 cursor-pointer hover:text-black"
@@ -493,7 +578,7 @@ export default function WatchesCollectionPage() {
                           mat
                         )
                       }
-                      className="w-4 h-4 text-black rounded accent-black"
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
                     {mat}
                   </label>
@@ -523,7 +608,7 @@ export default function WatchesCollectionPage() {
                           col
                         )
                       }
-                      className="w-4 h-4 text-black rounded accent-black"
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
                     {col}
                   </label>
@@ -532,9 +617,25 @@ export default function WatchesCollectionPage() {
             </div>
           </aside>
 
-          {/* Product Grid */}
+          {/* Product Grid & Pagination Section */}
           <section className="flex-1">
-            {sortedProducts.length === 0 ? (
+            {isLoading ? (
+              /* Loading Skeleton Grid (12 items) */
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
+                {Array.from({ length: ITEMS_PER_PAGE }).map((_, i) => (
+                  <div
+                    key={`skeleton-${i}`}
+                    className="border border-gray-100 p-3 sm:p-4 animate-pulse flex flex-col space-y-3"
+                  >
+                    <div className="aspect-square bg-gray-100 rounded-sm" />
+                    <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    <div className="h-4 bg-gray-100 rounded w-4/5" />
+                    <div className="h-4 bg-gray-100 rounded w-1/2" />
+                    <div className="h-3 bg-gray-100 rounded w-1/4" />
+                  </div>
+                ))}
+              </div>
+            ) : paginatedProducts.length === 0 ? (
               <div className="text-center py-24 border border-dashed border-gray-200 rounded-sm">
                 <p className="text-sm font-semibold tracking-widest text-gray-400 uppercase mb-4">
                   No watches matches your selection.
@@ -542,89 +643,167 @@ export default function WatchesCollectionPage() {
 
                 <button
                   onClick={resetFilters}
-                  className="bg-black text-white px-6 py-3 text-xs font-bold tracking-widest uppercase hover:bg-gray-800 transition-colors"
+                  className="bg-black text-white px-6 py-3 text-xs font-bold tracking-widest uppercase hover:bg-gray-800 transition-colors cursor-pointer"
                 >
                   Reset Filters
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-                {paginatedProducts.map((product) => {
-                  const rawPrice = getProductPrice(product.price);
-                  const displayOriginalPrice = rawPrice * 1.15;
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
+                  {paginatedProducts.map((product) => {
+                    const rawPrice = getProductPrice(product.price);
+                    const displayOriginalPrice = rawPrice * 1.15;
 
-                  return (
-                    <div
-                      key={product.id}
-                      onClick={() => router.push(`/product/${product.id}`)}
-                      className="group flex flex-col relative bg-white cursor-pointer border border-gray-100/50 hover:shadow-lg transition-all duration-300 p-2 sm:p-4"
-                    >
-                      {/* Wishlist Icon */}
-                      <button
-                        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 bg-white/95 p-1.5 sm:p-2 rounded-full hover:bg-white shadow-sm transition-colors"
-                        onClick={(e) => e.stopPropagation()}
+                    return (
+                      <div
+                        key={product.id}
+                        onClick={() => router.push(`/product/${product.id}`)}
+                        className="group flex flex-col relative bg-white cursor-pointer border border-gray-100/50 hover:shadow-lg transition-all duration-300 p-2 sm:p-4"
                       >
-                        <Heart className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-black" />
-                      </button>
+                        {/* Wishlist Icon */}
+                        <button
+                          className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 bg-white/95 p-1.5 sm:p-2 rounded-full hover:bg-white shadow-sm transition-colors cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Save to Wishlist"
+                        >
+                          <Heart className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-black" />
+                        </button>
 
-                      {/* Image Frame */}
-                      <div className="aspect-square bg-white mb-2 sm:mb-6 overflow-hidden flex items-center justify-center p-2 sm:p-6 relative">
-                        <ResponsiveImage
-                          src={product.image}
-                          alt={product.name}
-                          widths={[150, 300, 500]}
-                          sizes="(max-width: 640px) 150px, (max-width: 1024px) 300px, 400px"
-                          className="w-4/5 h-4/5 object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                        />
+                        {/* Image Frame */}
+                        <div className="aspect-square bg-white mb-2 sm:mb-6 overflow-hidden flex items-center justify-center p-2 sm:p-6 relative">
+                          <ResponsiveImage
+                            src={product.image}
+                            alt={product.name}
+                            widths={[150, 300, 500]}
+                            sizes="(max-width: 640px) 150px, (max-width: 1024px) 300px, 400px"
+                            className="w-4/5 h-4/5 object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                          />
 
-                        {product.stock === 0 && (
-                          <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-                            <span className="bg-black text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-1 sm:px-4 sm:py-2 rounded-sm">
-                              Out of Stock
+                          {product.stock === 0 && (
+                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                              <span className="bg-black text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-1 sm:px-4 sm:py-2 rounded-sm">
+                                Out of Stock
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Watch Specs */}
+                        <div className="space-y-1 sm:space-y-2 flex-1 flex flex-col">
+                          <div className="text-[8px] sm:text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                            {product.brand}
+                          </div>
+
+                          <h3 className="font-oswald text-xs sm:text-sm font-semibold tracking-wider uppercase text-black line-clamp-2 h-8 sm:h-10 flex-1">
+                            {product.name}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
+                            <span className="text-xs sm:text-sm font-bold">
+                              ₹{product.price}
+                            </span>
+
+                            <span className="text-[10px] sm:text-xs font-semibold text-red-500 line-through">
+                              ₹
+                              {new Intl.NumberFormat("en-IN").format(
+                                Math.round(displayOriginalPrice)
+                              )}
                             </span>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Watch Specs */}
-                      <div className="space-y-1 sm:space-y-2 flex-1 flex flex-col">
-                        <div className="text-[8px] sm:text-[10px] font-bold text-gray-400 tracking-widest uppercase">
-                          {product.brand}
-                        </div>
+                          <div className="flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-bold tracking-widest uppercase mt-1">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                product.stock > 0
+                                  ? "bg-[#25D366]"
+                                  : "bg-[#FF3B30]"
+                              }`}
+                            ></span>
 
-                        <h3 className="font-oswald text-xs sm:text-sm font-semibold tracking-wider uppercase text-black line-clamp-2 h-8 sm:h-10 flex-1">
-                          {product.name}
-                        </h3>
-
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
-                          <span className="text-xs sm:text-sm font-bold">
-                            ₹{product.price}
-                          </span>
-
-                          <span className="text-[10px] sm:text-xs font-semibold text-red-500 line-through">
-                            ₹
-                            {new Intl.NumberFormat("en-IN").format(
-                              Math.round(displayOriginalPrice)
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-bold tracking-widest uppercase mt-1">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              product.stock > 0
-                                ? "bg-[#25D366]"
-                                : "bg-[#FF3B30]"
-                            }`}
-                          ></span>
-
-                          {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                            {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="mt-14 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+                    {/* Showing info */}
+                    <div className="text-[11px] font-bold tracking-widest text-gray-400 uppercase text-center sm:text-left">
+                      Showing{" "}
+                      <span className="text-black">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                      </span>{" "}
+                      –{" "}
+                      <span className="text-black">
+                        {Math.min(currentPage * ITEMS_PER_PAGE, totalProducts)}
+                      </span>{" "}
+                      of <span className="text-black">{totalProducts}</span> watches
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Pagination Buttons */}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      {/* Previous Page Button */}
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage <= 1 || isLoading}
+                        className="px-3.5 py-2 border border-black text-[10px] sm:text-[11px] font-bold tracking-widest uppercase transition-all hover:bg-black hover:text-white disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-black cursor-pointer flex items-center gap-1"
+                        aria-label="Previous Page"
+                      >
+                        <ChevronLeft size={14} />
+                        <span className="hidden sm:inline">Prev</span>
+                      </button>
+
+                      {/* Numbered Page Buttons */}
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        {pageNumbers.map((pageNum, idx) => {
+                          if (pageNum === "...") {
+                            return (
+                              <span
+                                key={`dots-${idx}`}
+                                className="w-8 h-8 flex items-center justify-center text-xs text-gray-400 font-bold"
+                              >
+                                ...
+                              </span>
+                            );
+                          }
+                          return (
+                            <button
+                              key={`page-${pageNum}`}
+                              onClick={() => handlePageChange(pageNum)}
+                              disabled={isLoading}
+                              className={`w-8 h-8 sm:w-9 sm:h-9 text-[11px] sm:text-xs font-bold tracking-widest uppercase transition-all cursor-pointer flex items-center justify-center rounded-xs ${
+                                currentPage === pageNum
+                                  ? "bg-black text-white"
+                                  : "border border-gray-200 text-gray-700 hover:border-black hover:text-black"
+                              }`}
+                              aria-label={`Page ${pageNum}`}
+                              aria-current={currentPage === pageNum ? "page" : undefined}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Next Page Button */}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage >= totalPages || isLoading}
+                        className="px-3.5 py-2 border border-black text-[10px] sm:text-[11px] font-bold tracking-widest uppercase transition-all hover:bg-black hover:text-white disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-black cursor-pointer flex items-center gap-1"
+                        aria-label="Next Page"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </div>
@@ -645,7 +824,10 @@ export default function WatchesCollectionPage() {
                 Filters
               </h2>
 
-              <button onClick={() => setIsMobileFilterOpen(false)}>
+              <button
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="cursor-pointer"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -660,13 +842,13 @@ export default function WatchesCollectionPage() {
                 {availableBrands.map((brand) => (
                   <label
                     key={`mob-${brand}`}
-                    className="flex items-center gap-3 cursor-pointer text-xs font-semibold uppercase tracking-wider text-gray-600"
+                    className="flex items-center gap-3 cursor-pointer text-xs font-semibold uppercase tracking-wider text-gray-600 hover:text-black"
                   >
                     <input
                       type="checkbox"
                       checked={selectedBrands.includes(brand)}
                       onChange={() => handleBrandToggle(brand)}
-                      className="w-4 h-4 text-black rounded accent-black"
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
                     {brand}
                   </label>
@@ -686,7 +868,6 @@ export default function WatchesCollectionPage() {
                     <span className="block text-[9px] text-gray-400 mb-1">
                       MIN
                     </span>
-
                     <input
                       type="number"
                       value={priceRange[0]}
@@ -704,7 +885,6 @@ export default function WatchesCollectionPage() {
                     <span className="block text-[9px] text-gray-400 mb-1">
                       MAX
                     </span>
-
                     <input
                       type="number"
                       value={priceRange[1]}
@@ -733,7 +913,7 @@ export default function WatchesCollectionPage() {
                     type="checkbox"
                     checked={availability.includes("in-stock")}
                     onChange={() => handleAvailabilityToggle("in-stock")}
-                    className="w-4 h-4 text-black rounded accent-black"
+                    className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                   />
                   In Stock
                 </label>
@@ -743,7 +923,7 @@ export default function WatchesCollectionPage() {
                     type="checkbox"
                     checked={availability.includes("out-of-stock")}
                     onChange={() => handleAvailabilityToggle("out-of-stock")}
-                    className="w-4 h-4 text-black rounded accent-black"
+                    className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                   />
                   Out of Stock
                 </label>
@@ -753,14 +933,14 @@ export default function WatchesCollectionPage() {
             <div className="pt-6 flex gap-4">
               <button
                 onClick={resetFilters}
-                className="flex-1 border border-black py-3 text-xs font-bold tracking-widest uppercase hover:bg-black hover:text-white transition-all"
+                className="flex-1 border border-black py-3 text-xs font-bold tracking-widest uppercase hover:bg-black hover:text-white transition-all cursor-pointer"
               >
                 Clear
               </button>
 
               <button
                 onClick={() => setIsMobileFilterOpen(false)}
-                className="flex-1 bg-black text-white py-3 text-xs font-bold tracking-widest uppercase hover:bg-gray-800 transition-all"
+                className="flex-1 bg-black text-white py-3 text-xs font-bold tracking-widest uppercase hover:bg-gray-800 transition-all cursor-pointer"
               >
                 Apply
               </button>
@@ -768,7 +948,6 @@ export default function WatchesCollectionPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

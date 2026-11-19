@@ -49,22 +49,26 @@ export async function GET(request) {
       query.status = "Active";
     }
 
-    // Brand filter
+    // Brand filter (supports single brand or comma-separated list)
     if (brandParam) {
-      if (mongoose.Types.ObjectId.isValid(brandParam)) {
-        query.brand = brandParam;
+      const brandList = brandParam
+        .split(",")
+        .map((b) => b.trim())
+        .filter(Boolean);
+
+      if (brandList.length === 1 && mongoose.Types.ObjectId.isValid(brandList[0])) {
+        query.brand = brandList[0];
       } else {
-        // Find brand by name or slug
-        const brandDoc = await Brand.findOne({
-          $or: [
-            { name: { $regex: new RegExp(`^${brandParam}$`, "i") } },
-            { slug: brandParam.toLowerCase() },
-          ],
-        });
-        if (brandDoc) {
-          query.brand = brandDoc._id;
+        const brandDocs = await Brand.find({
+          $or: brandList.flatMap((b) => [
+            { name: { $regex: new RegExp(`^${b}$`, "i") } },
+            { slug: b.toLowerCase() },
+          ]),
+        }).select("_id");
+
+        if (brandDocs.length > 0) {
+          query.brand = { $in: brandDocs.map((b) => b._id) };
         } else {
-          // No such brand
           return NextResponse.json({
             success: true,
             products: [],
@@ -74,6 +78,23 @@ export async function GET(request) {
           });
         }
       }
+    }
+
+    // Price range filter
+    const minPrice = searchParams.get("minPrice");
+    const maxPrice = searchParams.get("maxPrice");
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    // Availability filter
+    const availabilityParam = searchParams.get("availability");
+    if (availabilityParam === "in-stock") {
+      query.stock = { $gt: 0 };
+    } else if (availabilityParam === "out-of-stock") {
+      query.stock = 0;
     }
 
     // Search filter
