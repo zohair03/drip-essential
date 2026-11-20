@@ -47,7 +47,7 @@ export function BrandCategoriesSection() {
               <motion.div
                 key={brand.id || brand.slug || brand.name}
                 onClick={() =>
-                  router.push(`/watches/${(brand.slug || brand.name).toLowerCase()}`)
+                  router.push(`/watches?brand=${encodeURIComponent(brand.name)}`)
                 }
                 className="group cursor-pointer flex-shrink-0 flex flex-col items-center justify-between bg-white w-fit"
                 initial={{ opacity: 0, x: 50 }}

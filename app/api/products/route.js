@@ -97,19 +97,88 @@ export async function GET(request) {
       query.stock = 0;
     }
 
-    // Search filter
+    // Search filter (searches product name, description, and brand name)
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+      const searchRegex = { $regex: search, $options: "i" };
+      const matchingBrands = await Brand.find({
+        $or: [{ name: searchRegex }, { slug: searchRegex }],
+      }).select("_id");
+
+      const searchConditions = [
+        { name: searchRegex },
+        { description: searchRegex },
       ];
+
+      if (matchingBrands.length > 0) {
+        searchConditions.push({
+          brand: { $in: matchingBrands.map((b) => b._id) },
+        });
+      }
+
+      if (query.$and) {
+        query.$and.push({ $or: searchConditions });
+      } else if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: searchConditions }];
+        delete query.$or;
+      } else {
+        query.$or = searchConditions;
+      }
+    }
+
+    // Material filter
+    const materialParam = searchParams.get("material");
+    if (materialParam) {
+      const materials = materialParam
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
+      if (materials.length > 0) {
+        const matConditions = materials.map((m) => ({
+          description: { $regex: m, $options: "i" },
+        }));
+        if (!query.$and) query.$and = [];
+        query.$and.push({ $or: matConditions });
+      }
+    }
+
+    // Strap Type filter
+    const strapParam = searchParams.get("strap");
+    if (strapParam) {
+      const straps = strapParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (straps.length > 0) {
+        const strapConditions = straps.map((s) => ({
+          description: { $regex: s, $options: "i" },
+        }));
+        if (!query.$and) query.$and = [];
+        query.$and.push({ $or: strapConditions });
+      }
+    }
+
+    // Color filter
+    const colorParam = searchParams.get("color");
+    if (colorParam) {
+      const colors = colorParam
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      if (colors.length > 0) {
+        const colorConditions = colors.flatMap((c) => [
+          { description: { $regex: c, $options: "i" } },
+          { name: { $regex: c, $options: "i" } },
+        ]);
+        if (!query.$and) query.$and = [];
+        query.$and.push({ $or: colorConditions });
+      }
     }
 
     // Sort order
     let sortObj = { createdAt: -1 };
-    if (sortParam === "price-low") {
+    if (sortParam === "price-low" || sortParam === "price-asc") {
       sortObj = { price: 1 };
-    } else if (sortParam === "price-high") {
+    } else if (sortParam === "price-high" || sortParam === "price-desc") {
       sortObj = { price: -1 };
     } else if (sortParam === "newest") {
       sortObj = { createdAt: -1 };

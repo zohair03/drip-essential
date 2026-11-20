@@ -12,9 +12,8 @@ import {
 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { ResponsiveImage } from "../sections/ResponsiveImage";
-import { WatchesCollectionNavbar } from "../ui/WatchesCollectionNavbar.jsx";
 
-const ITEMS_PER_PAGE = 100;
+const ITEMS_PER_PAGE = 12;
 
 function formatApiProduct(p) {
   const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
@@ -67,188 +66,246 @@ export default function WatchesCollectionPage() {
     }
     return [
       "ROLEX",
-      "OMEGA",
       "TAG HEUER",
-      "TUDOR",
+      "OMEGA",
+      "SEIKO",
       "RADO",
-      "LOUIS ERARD",
       "G-SHOCK",
       "FOSSIL",
-      "SEIKO",
+      "LONGINES",
+      "CARTIER",
+      "TISSOT",
+      "SWATCH",
+      "HUBLOT",
+      "ARMANI",
+      "BOSS",
+      "AUDEMARS PIGUET",
+      "PATEK PHILIPPE",
     ];
   }, [featuredBrands]);
 
-  // Filter States
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [availability, setAvailability] = useState([]);
-  const [selectedMaterials, setSelectedMaterials] = useState([]);
-  const [selectedStrapTypes, setSelectedStrapTypes] = useState([]);
-  const [selectedColours, setSelectedColours] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 500000]);
-  const [debouncedPriceRange, setDebouncedPriceRange] = useState([0, 500000]);
-  const [sortBy, setSortBy] = useState("featured");
+  // Extract filter parameters from URL Search Parameters (Single Source of Truth)
+  const urlBrand = searchParams.get("brand") || (brandName ? String(brandName) : "");
+  const selectedBrands = useMemo(() => {
+    if (!urlBrand) return [];
+    return urlBrand
+      .split(",")
+      .map((b) => b.trim().toUpperCase())
+      .filter(Boolean);
+  }, [urlBrand]);
+
+  const urlSearch = searchParams.get("search") || "";
+  const urlMinPrice = parseInt(searchParams.get("minPrice") || "0", 10);
+  const urlMaxPrice = parseInt(searchParams.get("maxPrice") || "500000", 10);
+  const sortBy = searchParams.get("sort") || "featured";
+
+  const urlAvailability = searchParams.get("availability") || "";
+  const availability = useMemo(() => {
+    if (!urlAvailability) return [];
+    return urlAvailability
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+  }, [urlAvailability]);
+
+  const urlStrap = searchParams.get("strap") || "";
+  const selectedStrapTypes = useMemo(() => {
+    if (!urlStrap) return [];
+    return urlStrap
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [urlStrap]);
+
+  const urlMaterial = searchParams.get("material") || "";
+  const selectedMaterials = useMemo(() => {
+    if (!urlMaterial) return [];
+    return urlMaterial
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
+  }, [urlMaterial]);
+
+  const urlColor = searchParams.get("color") || "";
+  const selectedColours = useMemo(() => {
+    if (!urlColor) return [];
+    return urlColor
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }, [urlColor]);
+
+  const currentPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+
+  // Local state for smooth typing & slider dragging without input lag
+  const [searchInput, setSearchInput] = useState(urlSearch);
+  const [localPriceRange, setLocalPriceRange] = useState([urlMinPrice, urlMaxPrice]);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  // Sync local inputs if URL changes externally (e.g. back/forward navigation)
+  useEffect(() => {
+    setSearchInput(urlSearch);
+  }, [urlSearch]);
+
+  useEffect(() => {
+    setLocalPriceRange([urlMinPrice, urlMaxPrice]);
+  }, [urlMinPrice, urlMaxPrice]);
+
+  // Product Data States
   const [paginatedProducts, setPaginatedProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Debounce search query
+  // Helper to update URL search parameters and keep state in sync
+  const updateFilters = useCallback(
+    (updates) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      Object.entries(updates).forEach(([key, val]) => {
+        if (
+          val === null ||
+          val === undefined ||
+          val === "" ||
+          (Array.isArray(val) && val.length === 0)
+        ) {
+          params.delete(key);
+        } else if (Array.isArray(val)) {
+          params.set(key, val.join(","));
+        } else {
+          params.set(key, String(val));
+        }
+      });
+
+      // If any filter other than page was modified, reset to page 1 unless page explicitly passed
+      if (!("page" in updates) && updates.page === undefined) {
+        params.delete("page");
+      }
+
+      const qs = params.toString();
+      router.replace(`/watches${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
+
+  // Debounced update for search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
+      if (searchInput.trim() !== urlSearch) {
+        updateFilters({ search: searchInput.trim() || null });
+      }
     }, 350);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchInput, urlSearch, updateFilters]);
 
-  // Debounce price slider
+  // Debounced update for price range
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedPriceRange(priceRange);
+      if (
+        localPriceRange[0] !== urlMinPrice ||
+        localPriceRange[1] !== urlMaxPrice
+      ) {
+        updateFilters({
+          minPrice: localPriceRange[0] > 0 ? localPriceRange[0] : null,
+          maxPrice: localPriceRange[1] < 500000 ? localPriceRange[1] : null,
+        });
+      }
     }, 350);
     return () => clearTimeout(timer);
-  }, [priceRange]);
-
-  // Sync route parameters & URL search query on load or route change
-  useEffect(() => {
-    if (brandName) {
-      setSelectedBrands([brandName.toUpperCase()]);
-    } else {
-      setSelectedBrands([]);
-    }
-
-    const query = searchParams.get("search");
-    if (query) {
-      setSearchQuery(query);
-      setDebouncedSearch(query);
-    } else {
-      setSearchQuery("");
-      setDebouncedSearch("");
-    }
-    setCurrentPage(1);
-  }, [brandName, searchParams]);
-
-  // Reset page to 1 whenever any filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    debouncedSearch,
-    selectedBrands,
-    availability,
-    debouncedPriceRange,
-    sortBy,
-    selectedMaterials,
-    selectedStrapTypes,
-    selectedColours,
-  ]);
+  }, [localPriceRange, urlMinPrice, urlMaxPrice, updateFilters]);
 
   // Fetch only the active page's 12 watches from the database
-  const fetchWatches = useCallback(async (pageToFetch = 1) => {
+  const activeFetchIdRef = useRef(0);
+  const fetchWatches = useCallback(async () => {
     setIsLoading(true);
+    const fetchId = ++activeFetchIdRef.current;
+
     try {
-      const params = new URLSearchParams();
-      params.set("page", String(pageToFetch));
-      params.set("limit", String(ITEMS_PER_PAGE));
-      if (sortBy) params.set("sort", sortBy);
-      if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+      const apiParams = new URLSearchParams();
+      apiParams.set("page", String(currentPage));
+      apiParams.set("limit", String(ITEMS_PER_PAGE));
 
-      const brandsToQuery =
-        selectedBrands.length > 0
-          ? selectedBrands
-          : brandName
-          ? [brandName.toUpperCase()]
-          : [];
-
-      if (brandsToQuery.length > 0) {
-        params.set("brand", brandsToQuery.join(","));
+      if (selectedBrands.length > 0) {
+        apiParams.set("brand", selectedBrands.join(","));
       }
-
-      if (debouncedPriceRange[0] > 0) {
-        params.set("minPrice", String(debouncedPriceRange[0]));
+      if (urlSearch.trim()) {
+        apiParams.set("search", urlSearch.trim());
       }
-      if (debouncedPriceRange[1] < 500000) {
-        params.set("maxPrice", String(debouncedPriceRange[1]));
+      if (urlMinPrice > 0) {
+        apiParams.set("minPrice", String(urlMinPrice));
       }
-
+      if (urlMaxPrice < 500000) {
+        apiParams.set("maxPrice", String(urlMaxPrice));
+      }
       if (availability.length === 1) {
-        params.set("availability", availability[0]);
+        apiParams.set("availability", availability[0]);
+      }
+      if (selectedStrapTypes.length > 0) {
+        apiParams.set("strap", selectedStrapTypes.join(","));
+      }
+      if (selectedMaterials.length > 0) {
+        apiParams.set("material", selectedMaterials.join(","));
+      }
+      if (selectedColours.length > 0) {
+        apiParams.set("color", selectedColours.join(","));
+      }
+      if (sortBy) {
+        apiParams.set("sort", sortBy);
       }
 
-      const res = await fetch(`/api/products?${params.toString()}`, {
+      const res = await fetch(`/api/products?${apiParams.toString()}`, {
         cache: "no-store",
       });
       const data = await res.json();
 
-      if (data && data.success) {
-        let items = Array.isArray(data.products)
-          ? data.products.map(formatApiProduct)
-          : [];
-
-        // Apply secondary client-side description filters if set
-        if (selectedMaterials.length > 0) {
-          items = items.filter((p) => {
-            const desc = (p.description || "").toLowerCase();
-            return selectedMaterials.some((m) => desc.includes(m.toLowerCase()));
-          });
+      if (fetchId === activeFetchIdRef.current) {
+        if (data && data.success) {
+          const items = Array.isArray(data.products)
+            ? data.products.map(formatApiProduct)
+            : [];
+          setPaginatedProducts(items);
+          setTotalProducts(data.total || 0);
+          setTotalPages(data.pages || 1);
+        } else {
+          setPaginatedProducts([]);
+          setTotalProducts(0);
+          setTotalPages(1);
         }
-        if (selectedStrapTypes.length > 0) {
-          items = items.filter((p) => {
-            const desc = (p.description || "").toLowerCase();
-            return selectedStrapTypes.some((s) => desc.includes(s.toLowerCase()));
-          });
-        }
-        if (selectedColours.length > 0) {
-          items = items.filter((p) => {
-            const desc = (p.description || "").toLowerCase();
-            const name = (p.name || "").toLowerCase();
-            return selectedColours.some(
-              (c) => desc.includes(c.toLowerCase()) || name.includes(c.toLowerCase())
-            );
-          });
-        }
-
-        setPaginatedProducts(items);
-        setTotalProducts(data.total || 0);
-        setTotalPages(data.pages || 1);
-      } else {
+        setIsLoading(false);
+      }
+    } catch (err) {
+      if (fetchId === activeFetchIdRef.current) {
+        console.error("WatchesCollection fetch error:", err);
         setPaginatedProducts([]);
         setTotalProducts(0);
         setTotalPages(1);
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("WatchesCollection fetch error:", err);
-      setPaginatedProducts([]);
-      setTotalProducts(0);
-      setTotalPages(1);
-    } finally {
-      setIsLoading(false);
     }
   }, [
-    debouncedSearch,
+    currentPage,
     selectedBrands,
-    brandName,
-    debouncedPriceRange,
+    urlSearch,
+    urlMinPrice,
+    urlMaxPrice,
     availability,
-    sortBy,
-    selectedMaterials,
     selectedStrapTypes,
+    selectedMaterials,
     selectedColours,
+    sortBy,
   ]);
 
-  // Execute fetch when currentPage or query params change
+  // Execute fetch when searchParams change
   useEffect(() => {
-    fetchWatches(currentPage);
-  }, [fetchWatches, currentPage]);
+    fetchWatches();
+  }, [fetchWatches]);
 
-  // Page change handler with smooth scrolling
+  // Handle page change with smooth scroll to top of collection
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > totalPages || newPage === currentPage || isLoading) {
       return;
     }
-    setCurrentPage(newPage);
+    updateFilters({ page: newPage });
     if (gridTopRef.current) {
       const topOffset =
         gridTopRef.current.getBoundingClientRect().top + window.scrollY - 90;
@@ -256,19 +313,11 @@ export default function WatchesCollectionPage() {
     }
   };
 
-  // Reset filters
+  // Reset all filters
   const resetFilters = () => {
-    setSearchQuery("");
-    setDebouncedSearch("");
-    setSelectedBrands(brandName ? [brandName.toUpperCase()] : []);
-    setAvailability([]);
-    setSelectedMaterials([]);
-    setSelectedStrapTypes([]);
-    setSelectedColours([]);
-    setPriceRange([0, 500000]);
-    setDebouncedPriceRange([0, 500000]);
-    setSortBy("featured");
-    setCurrentPage(1);
+    setSearchInput("");
+    setLocalPriceRange([0, 500000]);
+    router.replace("/watches", { scroll: false });
   };
 
   // Helper to parse price string to number
@@ -276,35 +325,32 @@ export default function WatchesCollectionPage() {
     return parseFloat(String(priceStr).replace(/,/g, "")) || 0;
   };
 
-  // Handle brand filter toggle
+  // Handle Brand Toggle
   const handleBrandToggle = (brand) => {
-    if (selectedBrands.includes(brand)) {
-      const updated = selectedBrands.filter((b) => b !== brand);
-      setSelectedBrands(updated);
-      if (brandName && brandName.toUpperCase() === brand) {
-        router.push("/watches");
-      }
-    } else {
-      setSelectedBrands([...selectedBrands, brand]);
-    }
+    const brandUpper = brand.toUpperCase();
+    const isSelected = selectedBrands.includes(brandUpper);
+    const updated = isSelected
+      ? selectedBrands.filter((b) => b !== brandUpper)
+      : [...selectedBrands, brandUpper];
+    updateFilters({ brand: updated });
   };
 
-  // Handle availability filter
+  // Handle Availability Toggle
   const handleAvailabilityToggle = (status) => {
-    if (availability.includes(status)) {
-      setAvailability(availability.filter((s) => s !== status));
-    } else {
-      setAvailability([...availability, status]);
-    }
+    const isSelected = availability.includes(status);
+    const updated = isSelected
+      ? availability.filter((s) => s !== status)
+      : [...availability, status];
+    updateFilters({ availability: updated });
   };
 
-  // Handle other filters
-  const handleFilterToggle = (list, setList, item) => {
-    if (list.includes(item)) {
-      setList(list.filter((i) => i !== item));
-    } else {
-      setList([...list, item]);
-    }
+  // Handle generic array filter toggle
+  const handleFilterToggle = (list, key, item) => {
+    const isSelected = list.includes(item);
+    const updated = isSelected
+      ? list.filter((i) => i !== item)
+      : [...list, item];
+    updateFilters({ [key]: updated });
   };
 
   // Smart Pagination numbers generator
@@ -332,13 +378,10 @@ export default function WatchesCollectionPage() {
     return pages;
   }, [totalPages, currentPage]);
 
-
   return (
     <div className="min-h-screen bg-white text-black font-['Montserrat',sans-serif]">
-      {/* <WatchesCollectionNavbar theme="dark" /> */}
-
       {/* Toolbar / Search & Sort */}
-      <div ref={gridTopRef} className="border-b border-gray-200 bg-white py-6 mt-15">
+      <div ref={gridTopRef} className="border-b border-gray-200 bg-white py-6 mt-16 md:mt-20">
         <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Mobile Filter Button & Filter Count */}
           <div className="flex items-center gap-4 w-full md:w-auto">
@@ -351,7 +394,7 @@ export default function WatchesCollectionPage() {
             </button>
 
             <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">
-              {isLoading ? "Loading..." : `${totalProducts} Timepieces Found`}
+              {isLoading ? "Searching..." : `${totalProducts} Timepieces Found`}
             </span>
           </div>
 
@@ -360,8 +403,8 @@ export default function WatchesCollectionPage() {
             <div className="relative flex-1 md:w-64 max-w-md">
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="SEARCH WATCHES..."
                 className="w-full bg-[#F3F3F3] border-none text-xs font-semibold tracking-widest placeholder-gray-400 py-3 pl-10 pr-4 rounded-sm focus:outline-none focus:ring-1 focus:ring-black uppercase"
               />
@@ -369,9 +412,12 @@ export default function WatchesCollectionPage() {
                 size={16}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
               />
-              {searchQuery && (
+              {searchInput && (
                 <button
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => {
+                    setSearchInput("");
+                    updateFilters({ search: null });
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black cursor-pointer"
                 >
                   <X size={14} />
@@ -383,7 +429,7 @@ export default function WatchesCollectionPage() {
               <ArrowUpDown size={14} className="text-gray-400" />
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => updateFilters({ sort: e.target.value })}
                 className="bg-transparent text-xs font-semibold tracking-widest uppercase focus:outline-none cursor-pointer py-1"
               >
                 <option value="featured">Featured</option>
@@ -421,7 +467,7 @@ export default function WatchesCollectionPage() {
                 Brands
               </h3>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
                 {availableBrands.map((brand) => (
                   <label
                     key={brand}
@@ -429,7 +475,7 @@ export default function WatchesCollectionPage() {
                   >
                     <input
                       type="checkbox"
-                      checked={selectedBrands.includes(brand)}
+                      checked={selectedBrands.includes(brand.toUpperCase())}
                       onChange={() => handleBrandToggle(brand)}
                       className="w-4 h-4 text-black focus:ring-black border-gray-300 rounded accent-black cursor-pointer"
                     />
@@ -453,11 +499,11 @@ export default function WatchesCollectionPage() {
                     </span>
                     <input
                       type="number"
-                      value={priceRange[0]}
+                      value={localPriceRange[0]}
                       onChange={(e) =>
-                        setPriceRange([
+                        setLocalPriceRange([
                           parseInt(e.target.value) || 0,
-                          priceRange[1],
+                          localPriceRange[1],
                         ])
                       }
                       className="w-full bg-[#F3F3F3] border-none px-2 py-1.5 focus:outline-none"
@@ -470,10 +516,10 @@ export default function WatchesCollectionPage() {
                     </span>
                     <input
                       type="number"
-                      value={priceRange[1]}
+                      value={localPriceRange[1]}
                       onChange={(e) =>
-                        setPriceRange([
-                          priceRange[0],
+                        setLocalPriceRange([
+                          localPriceRange[0],
                           parseInt(e.target.value) || 500000,
                         ])
                       }
@@ -487,9 +533,9 @@ export default function WatchesCollectionPage() {
                   min={0}
                   max={500000}
                   step={5000}
-                  value={priceRange[1]}
+                  value={localPriceRange[1]}
                   onChange={(e) =>
-                    setPriceRange([priceRange[0], parseInt(e.target.value)])
+                    setLocalPriceRange([localPriceRange[0], parseInt(e.target.value)])
                   }
                   className="w-full accent-black cursor-pointer"
                 />
@@ -541,11 +587,7 @@ export default function WatchesCollectionPage() {
                       type="checkbox"
                       checked={selectedStrapTypes.includes(strap)}
                       onChange={() =>
-                        handleFilterToggle(
-                          selectedStrapTypes,
-                          setSelectedStrapTypes,
-                          strap
-                        )
+                        handleFilterToggle(selectedStrapTypes, "strap", strap)
                       }
                       className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
@@ -571,11 +613,7 @@ export default function WatchesCollectionPage() {
                       type="checkbox"
                       checked={selectedMaterials.includes(mat)}
                       onChange={() =>
-                        handleFilterToggle(
-                          selectedMaterials,
-                          setSelectedMaterials,
-                          mat
-                        )
+                        handleFilterToggle(selectedMaterials, "material", mat)
                       }
                       className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
@@ -601,11 +639,7 @@ export default function WatchesCollectionPage() {
                       type="checkbox"
                       checked={selectedColours.includes(col)}
                       onChange={() =>
-                        handleFilterToggle(
-                          selectedColours,
-                          setSelectedColours,
-                          col
-                        )
+                        handleFilterToggle(selectedColours, "color", col)
                       }
                       className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
@@ -845,7 +879,7 @@ export default function WatchesCollectionPage() {
                   >
                     <input
                       type="checkbox"
-                      checked={selectedBrands.includes(brand)}
+                      checked={selectedBrands.includes(brand.toUpperCase())}
                       onChange={() => handleBrandToggle(brand)}
                       className="w-4 h-4 text-black rounded accent-black cursor-pointer"
                     />
@@ -869,11 +903,11 @@ export default function WatchesCollectionPage() {
                     </span>
                     <input
                       type="number"
-                      value={priceRange[0]}
+                      value={localPriceRange[0]}
                       onChange={(e) =>
-                        setPriceRange([
+                        setLocalPriceRange([
                           parseInt(e.target.value) || 0,
-                          priceRange[1],
+                          localPriceRange[1],
                         ])
                       }
                       className="w-full bg-[#F3F3F3] border-none px-2 py-1"
@@ -886,10 +920,10 @@ export default function WatchesCollectionPage() {
                     </span>
                     <input
                       type="number"
-                      value={priceRange[1]}
+                      value={localPriceRange[1]}
                       onChange={(e) =>
-                        setPriceRange([
-                          priceRange[0],
+                        setLocalPriceRange([
+                          localPriceRange[0],
                           parseInt(e.target.value) || 500000,
                         ])
                       }
@@ -929,12 +963,90 @@ export default function WatchesCollectionPage() {
               </div>
             </div>
 
+            {/* Strap Type Filter */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold tracking-widest uppercase border-b border-gray-200 pb-2">
+                Strap Type
+              </h3>
+
+              <div className="space-y-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
+                {["Leather", "Metal", "Rubber", "Fabric"].map((strap) => (
+                  <label
+                    key={`mob-${strap}`}
+                    className="flex items-center gap-3 cursor-pointer hover:text-black"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedStrapTypes.includes(strap)}
+                      onChange={() =>
+                        handleFilterToggle(selectedStrapTypes, "strap", strap)
+                      }
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
+                    />
+                    {strap}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Material Filter */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold tracking-widest uppercase border-b border-gray-200 pb-2">
+                Material
+              </h3>
+
+              <div className="space-y-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
+                {["Steel", "Gold", "Ceramic", "Titanium"].map((mat) => (
+                  <label
+                    key={`mob-${mat}`}
+                    className="flex items-center gap-3 cursor-pointer hover:text-black"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMaterials.includes(mat)}
+                      onChange={() =>
+                        handleFilterToggle(selectedMaterials, "material", mat)
+                      }
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
+                    />
+                    {mat}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Filter */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold tracking-widest uppercase border-b border-gray-200 pb-2">
+                Color
+              </h3>
+
+              <div className="space-y-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
+                {["Black", "Silver", "Gold", "Blue", "Green"].map((col) => (
+                  <label
+                    key={`mob-${col}`}
+                    className="flex items-center gap-3 cursor-pointer hover:text-black"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedColours.includes(col)}
+                      onChange={() =>
+                        handleFilterToggle(selectedColours, "color", col)
+                      }
+                      className="w-4 h-4 text-black rounded accent-black cursor-pointer"
+                    />
+                    {col}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="pt-6 flex gap-4">
               <button
                 onClick={resetFilters}
                 className="flex-1 border border-black py-3 text-xs font-bold tracking-widest uppercase hover:bg-black hover:text-white transition-all cursor-pointer"
               >
-                Clear
+                Clear All
               </button>
 
               <button

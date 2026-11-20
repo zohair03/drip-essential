@@ -1,7 +1,7 @@
 "use client";
 
 import { Search, Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
@@ -67,7 +67,7 @@ export default function Navbar({ theme = "light" }) {
         el.scrollIntoView({ behavior: "smooth" });
       }
     } else {
-      router.push("/watches");
+      router.push("/");
     }
   };
 
@@ -87,29 +87,57 @@ export default function Navbar({ theme = "light" }) {
         .filter((b) => b.isVisible)
         .sort((a, b) => a.order - b.order)
         .map((b) => b.name)
-      : [
-        "Rolex",
-        "Omega",
-        "Tag Heuer",
-        "Seiko",
-        "Rado",
-        "Tudor",
-        "Longines",
-        "G-SHOCK",
-        "Fossil",
-      ];
+      : [];
 
-  const searchSuggestions =
-    searchQuery.trim() === ""
-      ? []
-      : products
-        .filter(
-          (p) =>
-            p.status !== "Draft" &&
-            (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              p.brand.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-        .slice(0, 5);
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const activeSearchIdRef = useRef(0);
+
+  // Debounced database search
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchSuggestions([]);
+      setIsSearching(false);
+      setHasSearched(false);
+      setSearchError(null);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+    const searchId = ++activeSearchIdRef.current;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/products?search=${encodeURIComponent(trimmed)}&limit=6`,
+          { cache: "no-store" }
+        );
+        const data = await res.json();
+
+        // Prevent race condition: ensure this is still the active search
+        if (searchId === activeSearchIdRef.current) {
+          if (data && data.success && Array.isArray(data.products)) {
+            setSearchSuggestions(data.products);
+          } else {
+            setSearchSuggestions([]);
+          }
+          setHasSearched(true);
+          setIsSearching(false);
+        }
+      } catch (err) {
+        if (searchId === activeSearchIdRef.current) {
+          setSearchError("Failed to search timepieces. Please try again.");
+          setIsSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -122,6 +150,8 @@ export default function Navbar({ theme = "light" }) {
       );
 
       setSearchQuery("");
+      setSearchSuggestions([]);
+      setHasSearched(false);
     }
   };
 
@@ -275,7 +305,7 @@ export default function Navbar({ theme = "light" }) {
                       {brands.map((brand) => (
                         <Link
                           key={brand}
-                          href={`/watches/${brand.toLowerCase()}`}
+                          href={`/watches?brand=${encodeURIComponent(brand)}`}
                           onClick={() => setIsMenuOpen(false)}
                           className="hover:text-gray-500 transition-colors"
                         >
@@ -341,42 +371,87 @@ export default function Navbar({ theme = "light" }) {
                     </button>
                   </form>
 
-                  {searchSuggestions.length > 0 && (
+                  {/* Loading State */}
+                  {isSearching && (
+                    <div className="mt-8 text-center text-xs font-semibold tracking-widest uppercase text-gray-400 animate-pulse">
+                      Searching timepieces...
+                    </div>
+                  )}
+
+                  {/* Error State */}
+                  {searchError && (
+                    <div className="mt-8 text-center text-xs font-semibold tracking-widest uppercase text-red-500">
+                      {searchError}
+                    </div>
+                  )}
+
+                  {/* No Results State */}
+                  {!isSearching && hasSearched && searchSuggestions.length === 0 && (
+                    <div className="mt-12 text-center py-6 font-sans">
+                      <p className="text-sm font-semibold tracking-widest text-gray-500 uppercase">
+                        No watches found matching &ldquo;{searchQuery}&rdquo;
+                      </p>
+                      <button
+                        onClick={() => {
+                          setIsSearchOpen(false);
+                          router.push("/watches");
+                        }}
+                        className="mt-4 text-xs font-bold tracking-widest uppercase underline hover:text-gray-600 cursor-pointer"
+                      >
+                        Browse All Watches →
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Suggestions List */}
+                  {!isSearching && searchSuggestions.length > 0 && (
                     <div className="mt-12 flex flex-col gap-2 font-sans text-left">
                       <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-4">
-                        Suggestions
+                        Matching Timepieces ({searchSuggestions.length})
                       </p>
 
-                      {searchSuggestions.map((product) => (
-                        <Link
-                          key={product.id}
-                          href={`/product/${product.id}`}
-                          onClick={() => setIsSearchOpen(false)}
-                          className="flex items-center gap-6 group hover:bg-gray-50 p-3 -mx-3 rounded transition-colors"
-                        >
-                          <div className="w-20 h-20 bg-white shrink-0 flex items-center justify-center p-2 rounded border border-gray-100 overflow-hidden">
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform"
-                            />
-                          </div>
+                      {searchSuggestions.map((product) => {
+                        const formattedPrice =
+                          typeof product.price === "number"
+                            ? new Intl.NumberFormat("en-IN").format(product.price)
+                            : String(product.price);
 
-                          <div className="flex flex-col justify-center">
-                            <span className="text-[10px] md:text-xs font-bold tracking-widest text-gray-400 uppercase mb-1">
-                              {product.brand}
-                            </span>
+                        return (
+                          <Link
+                            key={product.id}
+                            href={`/product/${product.id}`}
+                            onClick={() => {
+                              setIsSearchOpen(false);
+                              setSearchQuery("");
+                              setSearchSuggestions([]);
+                              setHasSearched(false);
+                            }}
+                            className="flex items-center gap-6 group hover:bg-gray-50 p-3 -mx-3 rounded transition-colors"
+                          >
+                            <div className="w-20 h-20 bg-white shrink-0 flex items-center justify-center p-2 rounded border border-gray-100 overflow-hidden">
+                              <img
+                                src={product.image || "/images/image.png"}
+                                alt={product.name}
+                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform"
+                              />
+                            </div>
 
-                            <span className="text-sm md:text-lg font-bold uppercase tracking-wider text-black">
-                              {product.name}
-                            </span>
+                            <div className="flex flex-col justify-center">
+                              <span className="text-[10px] md:text-xs font-bold tracking-widest text-gray-400 uppercase mb-1">
+                                {product.brand}
+                              </span>
 
-                            <span className="text-xs md:text-sm font-semibold tracking-widest text-gray-500 mt-1">
-                              ₹{product.price}
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
+                              <span className="text-sm md:text-lg font-bold uppercase tracking-wider text-black">
+                                {product.name}
+                              </span>
+
+                              <span className="text-xs md:text-sm font-semibold tracking-widest text-gray-500 mt-1">
+                                ₹{formattedPrice}
+                              </span>
+                            </div>
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
