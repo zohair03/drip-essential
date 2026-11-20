@@ -56,27 +56,51 @@ export async function GET(request) {
         .map((b) => b.trim())
         .filter(Boolean);
 
-      if (brandList.length === 1 && mongoose.Types.ObjectId.isValid(brandList[0])) {
-        query.brand = brandList[0];
-      } else {
-        const brandDocs = await Brand.find({
-          $or: brandList.flatMap((b) => [
+      const objectIds = brandList.filter((b) => mongoose.Types.ObjectId.isValid(b));
+      const namesOrSlugs = brandList.filter((b) => !mongoose.Types.ObjectId.isValid(b));
+
+      let matchedBrandIds = [...objectIds];
+
+      const lookupConditions = [];
+      if (namesOrSlugs.length > 0) {
+        lookupConditions.push(
+          ...namesOrSlugs.flatMap((b) => [
             { name: { $regex: new RegExp(`^${b}$`, "i") } },
             { slug: b.toLowerCase() },
-          ]),
-        }).select("_id");
+          ])
+        );
+      }
+      if (objectIds.length > 0) {
+        lookupConditions.push({
+          _id: { $in: objectIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        });
+      }
 
-        if (brandDocs.length > 0) {
-          query.brand = { $in: brandDocs.map((b) => b._id) };
-        } else {
-          return NextResponse.json({
-            success: true,
-            products: [],
-            total: 0,
-            page,
-            pages: 0,
-          });
-        }
+      if (lookupConditions.length > 0) {
+        const brandDocs = await Brand.find({ $or: lookupConditions }).select("_id name");
+        matchedBrandIds = Array.from(
+          new Set([
+            ...matchedBrandIds,
+            ...brandDocs.map((b) => b._id.toString()),
+          ])
+        );
+      }
+
+      if (matchedBrandIds.length > 0) {
+        const idStrings = matchedBrandIds.map((id) => id.toString());
+        const idObjects = matchedBrandIds
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        query.brand = { $in: [...idStrings, ...idObjects] };
+      } else {
+        return NextResponse.json({
+          success: true,
+          products: [],
+          total: 0,
+          page,
+          pages: 0,
+        });
       }
     }
 
@@ -110,8 +134,10 @@ export async function GET(request) {
       ];
 
       if (matchingBrands.length > 0) {
+        const brandIdStrings = matchingBrands.map((b) => b._id.toString());
+        const brandIdObjects = matchingBrands.map((b) => b._id);
         searchConditions.push({
-          brand: { $in: matchingBrands.map((b) => b._id) },
+          brand: { $in: [...brandIdStrings, ...brandIdObjects] },
         });
       }
 
