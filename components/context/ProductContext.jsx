@@ -70,78 +70,78 @@ export const defaultProducts = [
 
 // Default Featured Brands for BrandCategoriesSection fallback
 export const defaultFeaturedBrands = [
-  {
-    name: "ROLEX",
-    slug: "rolex",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014632/drip-essential/brands/skjeajwirdkihnwo0umq.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014632/drip-essential/brands/skjeajwirdkihnwo0umq.png",
-    isVisible: true,
-    order: 1,
-  },
-  {
-    name: "OMEGA",
-    slug: "omega",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014550/drip-essential/brands/ypon7r9ioxwd2xgrozhf.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014550/drip-essential/brands/ypon7r9ioxwd2xgrozhf.png",
-    isVisible: true,
-    order: 2,
-  },
-  {
-    name: "TAG HEUER",
-    slug: "tag-heuer",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014681/drip-essential/brands/tznasc1ugzhdaidpaiah.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014681/drip-essential/brands/tznasc1ugzhdaidpaiah.png",
-    isVisible: true,
-    order: 3,
-  },
-  {
-    name: "TUDOR",
-    slug: "tudor",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014701/drip-essential/brands/jb9nitnvpv1idgjb4iku.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014701/drip-essential/brands/jb9nitnvpv1idgjb4iku.png",
-    isVisible: true,
-    order: 4,
-  },
-  {
-    name: "RADO",
-    slug: "rado",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014609/drip-essential/brands/ah7jnk0xzouy42sjyc3b.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014609/drip-essential/brands/ah7jnk0xzouy42sjyc3b.png",
-    isVisible: true,
-    order: 5,
-  },
-  {
-    name: "LOUIS ERARD",
-    slug: "louis-erard",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014519/drip-essential/brands/xumzotastm4zgjotyf47.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014519/drip-essential/brands/xumzotastm4zgjotyf47.png",
-    isVisible: true,
-    order: 6,
-  },
-  {
-    name: "G-SHOCK",
-    slug: "g-shock",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014478/drip-essential/brands/mll5k6y8qqatrgoysawh.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014478/drip-essential/brands/mll5k6y8qqatrgoysawh.png",
-    isVisible: true,
-    order: 7,
-  },
-  {
-    name: "FOSSIL",
-    slug: "fossil",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014412/drip-essential/brands/g7pplfcnteo6yqedenxe.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014412/drip-essential/brands/g7pplfcnteo6yqedenxe.png",
-    isVisible: true,
-    order: 8,
-  },
-  {
-    name: "SEIKO",
-    slug: "seiko",
-    image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014662/drip-essential/brands/nkz5dhhbfi6gvu7aqk8y.png",
-    logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014662/drip-essential/brands/nkz5dhhbfi6gvu7aqk8y.png",
-    isVisible: true,
-    order: 9,
-  },
+  // {
+  //   name: "ROLEX",
+  //   slug: "rolex",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014632/drip-essential/brands/skjeajwirdkihnwo0umq.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014632/drip-essential/brands/skjeajwirdkihnwo0umq.png",
+  //   isVisible: true,
+  //   order: 1,
+  // },
+  // {
+  //   name: "OMEGA",
+  //   slug: "omega",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014550/drip-essential/brands/ypon7r9ioxwd2xgrozhf.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014550/drip-essential/brands/ypon7r9ioxwd2xgrozhf.png",
+  //   isVisible: true,
+  //   order: 2,
+  // },
+  // {
+  //   name: "TAG HEUER",
+  //   slug: "tag-heuer",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014681/drip-essential/brands/tznasc1ugzhdaidpaiah.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014681/drip-essential/brands/tznasc1ugzhdaidpaiah.png",
+  //   isVisible: true,
+  //   order: 3,
+  // },
+  // {
+  //   name: "TUDOR",
+  //   slug: "tudor",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014701/drip-essential/brands/jb9nitnvpv1idgjb4iku.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014701/drip-essential/brands/jb9nitnvpv1idgjb4iku.png",
+  //   isVisible: true,
+  //   order: 4,
+  // },
+  // {
+  //   name: "RADO",
+  //   slug: "rado",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014609/drip-essential/brands/ah7jnk0xzouy42sjyc3b.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014609/drip-essential/brands/ah7jnk0xzouy42sjyc3b.png",
+  //   isVisible: true,
+  //   order: 5,
+  // },
+  // {
+  //   name: "LOUIS ERARD",
+  //   slug: "louis-erard",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014519/drip-essential/brands/xumzotastm4zgjotyf47.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014519/drip-essential/brands/xumzotastm4zgjotyf47.png",
+  //   isVisible: true,
+  //   order: 6,
+  // },
+  // {
+  //   name: "G-SHOCK",
+  //   slug: "g-shock",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014478/drip-essential/brands/mll5k6y8qqatrgoysawh.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014478/drip-essential/brands/mll5k6y8qqatrgoysawh.png",
+  //   isVisible: true,
+  //   order: 7,
+  // },
+  // {
+  //   name: "FOSSIL",
+  //   slug: "fossil",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014412/drip-essential/brands/g7pplfcnteo6yqedenxe.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014412/drip-essential/brands/g7pplfcnteo6yqedenxe.png",
+  //   isVisible: true,
+  //   order: 8,
+  // },
+  // {
+  //   name: "SEIKO",
+  //   slug: "seiko",
+  //   image: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014662/drip-essential/brands/nkz5dhhbfi6gvu7aqk8y.png",
+  //   logoUrl: "https://res.cloudinary.com/dnqbhqi6/image/upload/v1795014662/drip-essential/brands/nkz5dhhbfi6gvu7aqk8y.png",
+  //   isVisible: true,
+  //   order: 9,
+  // },
 ];
 
 function formatApiProduct(p) {
@@ -197,7 +197,7 @@ const ProductContext = createContext(undefined);
 
 export function ProductProvider({ children }) {
   const [products, setProducts] = useState([]);
-  const [featuredBrands, setFeaturedBrands] = useState(defaultFeaturedBrands);
+  const [featuredBrands, setFeaturedBrands] = useState([]);
   const [showcaseWatches, setShowcaseWatches] = useState([]);
   const [bestsellerWatches, setBestsellerWatches] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
