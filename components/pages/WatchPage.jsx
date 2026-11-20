@@ -292,7 +292,7 @@ export default function WatchPage() {
           {/* Left Side: Images */}
           <div className="w-full lg:w-3/5 flex flex-col-reverse lg:flex-row gap-6">
             <div className="flex lg:flex-col gap-4 overflow-x-auto lg:overflow-visible no-scrollbar">
-              {productImages.map((img, idx) => (
+              {/* {productImages.map((img, idx) => (
                 <button
                   key={idx}
                   className={`w-20 h-20 flex-shrink-0 bg-[#F3F3F3] border-b-2 transition-all p-2 flex items-center justify-center ${
@@ -309,7 +309,7 @@ export default function WatchPage() {
                     className="max-w-full max-h-full object-contain mix-blend-multiply"
                   />
                 </button>
-              ))}
+              ))} */}
             </div>
 
             <div className="flex-1 bg-[#F3F3F3] p-10 flex items-center justify-center min-h-[400px] lg:min-h-[600px] relative group overflow-hidden">
