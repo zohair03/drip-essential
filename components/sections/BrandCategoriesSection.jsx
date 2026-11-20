@@ -49,7 +49,7 @@ export function BrandCategoriesSection() {
                 onClick={() =>
                   router.push(`/watches/${(brand.slug || brand.name).toLowerCase()}`)
                 }
-                className="group cursor-pointer flex-shrink-0 flex flex-col items-center justify-between bg-white w-[280px]"
+                className="group cursor-pointer flex-shrink-0 flex flex-col items-center justify-between bg-white w-fit"
                 initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{
@@ -58,12 +58,14 @@ export function BrandCategoriesSection() {
                 }}
                 viewport={{ once: true }}
               >
-                <div className="w-full h-[220px] flex items-center justify-center overflow-hidden mb-6 p-4">
+                <div className="w-fit h-fit md:h-[220px] flex items-center justify-center overflow-hidden mb-2">
                   <ResponsiveImage
+                  height={190}
+                  width={190}
                     src={brand.image || "/images/image.png"}
                     alt={brand.name}
-                    widths={[150, 300, 500]}
-                    sizes="(max-width: 768px) 150px, 300px"
+                    widths={[150, 200, 500]}
+                    sizes="(max-width: 768px) 200px, 400px"
                     className="max-w-[90%] max-h-[90%] object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>

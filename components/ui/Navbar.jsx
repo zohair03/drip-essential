@@ -84,32 +84,32 @@ export default function Navbar({ theme = "light" }) {
   const brands =
     featuredBrands && featuredBrands.length > 0
       ? featuredBrands
-          .filter((b) => b.isVisible)
-          .sort((a, b) => a.order - b.order)
-          .map((b) => b.name)
+        .filter((b) => b.isVisible)
+        .sort((a, b) => a.order - b.order)
+        .map((b) => b.name)
       : [
-          "Rolex",
-          "Omega",
-          "Tag Heuer",
-          "Seiko",
-          "Rado",
-          "Tudor",
-          "Longines",
-          "G-SHOCK",
-          "Fossil",
-        ];
+        "Rolex",
+        "Omega",
+        "Tag Heuer",
+        "Seiko",
+        "Rado",
+        "Tudor",
+        "Longines",
+        "G-SHOCK",
+        "Fossil",
+      ];
 
   const searchSuggestions =
     searchQuery.trim() === ""
       ? []
       : products
-          .filter(
-            (p) =>
-              p.status !== "Draft" &&
-              (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.brand.toLowerCase().includes(searchQuery.toLowerCase()))
-          )
-          .slice(0, 5);
+        .filter(
+          (p) =>
+            p.status !== "Draft" &&
+            (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              p.brand.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        .slice(0, 5);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -127,19 +127,18 @@ export default function Navbar({ theme = "light" }) {
 
   return (
     <nav
-      className={`z-50 font-['Playfair_Display'] transition-all duration-300 ${
-        isHomeActive
+      className={`z-50 font-['Playfair_Display'] fixed top-0 left-0 right-0 transition-all duration-300 ${isHomeActive
           ? isScrolled
-            ? "fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-black/5 shadow-sm"
-            : "absolute top-0 left-0 right-0 bg-transparent"
+            ? "bg-white/80 backdrop-blur-md border-b border-black/5 shadow-sm"
+            : "bg-transparent"
           : isDark
             ? isScrolled
-              ? "sticky top-0 bg-black/80 backdrop-blur-md border-b border-white/5 shadow-sm"
-              : "sticky top-0 bg-black"
+              ? "bg-black/80 backdrop-blur-md border-b border-white/5 shadow-sm"
+              : "bg-black"
             : isScrolled
-              ? "sticky top-0 bg-white/80 backdrop-blur-md border-b border-black/5 shadow-sm"
-              : "absolute top-0 left-0 right-0 bg-transparent"
-      }`}
+              ? "bg-white/80 backdrop-blur-md border-b border-black/5 shadow-sm"
+              : "bg-transparent"
+        }`}
     >
       <div className="max-w-[1400px] mx-auto px-6 py-8">
         <div className="flex items-center justify-between">
@@ -149,11 +148,10 @@ export default function Navbar({ theme = "light" }) {
 
             {/* Hamburger */}
             <button
-              className={`transition-colors ${
-                isDark && !isMenuOpen
-                  ? "text-white hover:text-gray-300"
-                  : "text-black hover:text-gray-600"
-              }`}
+              className={`transition-colors ${isDark && !isMenuOpen
+                ? "text-white hover:text-gray-300"
+                : "text-black hover:text-gray-600"
+                }`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? (
@@ -165,9 +163,8 @@ export default function Navbar({ theme = "light" }) {
 
             {/* Desktop Navigation Links (Hidden on mobile & tablet, visible on lg+) */}
             <div
-              className={`hidden lg:flex items-center gap-8 font-sans text-[11px] font-bold tracking-widest uppercase ${
-                isDark ? "text-white" : "text-black"
-              }`}
+              className={`hidden lg:flex items-center gap-8 font-sans text-[11px] font-bold tracking-widest uppercase ${isDark ? "text-white" : "text-black"
+                }`}
             >
               <Link
                 href="/"
@@ -198,6 +195,7 @@ export default function Navbar({ theme = "light" }) {
               >
                 About Us
               </a>
+
             </div>
           </div>
 
@@ -209,17 +207,15 @@ export default function Navbar({ theme = "light" }) {
             <img
               src="/images/logo.png"
               alt="Drip Essential"
-              className={`h-7 sm:h-8 md:h-12 w-auto object-contain transition-all duration-300 ${
-                isDark && !isMenuOpen ? "invert" : ""
-              }`}
+              className={`h-10 sm:h-10 md:h-12 w-auto object-contain transition-all duration-300 ${isDark && !isMenuOpen ? "invert" : ""
+                }`}
             />
           </Link>
 
           {/* Right: Icons */}
           <div
-            className={`flex items-center gap-5 z-50 ${
-              isDark ? "text-white" : "text-black"
-            }`}
+            className={`flex items-center gap-5 z-50 ${isDark ? "text-white" : "text-black"
+              }`}
           >
             <button
               className="transition-colors hover:opacity-75 cursor-pointer"

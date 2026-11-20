@@ -14,7 +14,7 @@ import { useProducts } from "../context/ProductContext";
 import { ResponsiveImage } from "../sections/ResponsiveImage";
 import { WatchesCollectionNavbar } from "../ui/WatchesCollectionNavbar.jsx";
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 100;
 
 function formatApiProduct(p) {
   const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
@@ -90,8 +90,6 @@ export default function WatchesCollectionPage() {
   const [debouncedPriceRange, setDebouncedPriceRange] = useState([0, 500000]);
   const [sortBy, setSortBy] = useState("featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-
-  // Pagination States (12 watches per page, strictly database-driven)
   const [currentPage, setCurrentPage] = useState(1);
   const [paginatedProducts, setPaginatedProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -334,12 +332,13 @@ export default function WatchesCollectionPage() {
     return pages;
   }, [totalPages, currentPage]);
 
+
   return (
     <div className="min-h-screen bg-white text-black font-['Montserrat',sans-serif]">
-      <WatchesCollectionNavbar theme="dark" />
+      {/* <WatchesCollectionNavbar theme="dark" /> */}
 
       {/* Toolbar / Search & Sort */}
-      <div ref={gridTopRef} className="border-b border-gray-200 bg-white py-6">
+      <div ref={gridTopRef} className="border-b border-gray-200 bg-white py-6 mt-15">
         <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Mobile Filter Button & Filter Count */}
           <div className="flex items-center gap-4 w-full md:w-auto">

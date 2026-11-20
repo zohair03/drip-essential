@@ -132,7 +132,7 @@ export default function WatchPage() {
       <main className="max-w-[1400px] mx-auto px-6 py-8">
         {/* Breadcrumb */}
         <div
-          className="flex items-center text-xs text-gray-500 mb-8 tracking-wider"
+          className="flex items-center text-xs text-gray-500 mt-20 mb-8 tracking-wider"
           style={{ fontFamily: "Montserrat, sans-serif" }}
         >
           <Link href="/" className="hover:text-black transition-colors">
@@ -391,8 +391,6 @@ export default function WatchPage() {
           </div>
         </div>
       </section>
-
-
     </div>
   );
 }

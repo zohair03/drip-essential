@@ -2,6 +2,8 @@ import React from "react";
 import Image from "next/image";
 
 export function ResponsiveImage({
+  height = 300,
+  width = 200,
   src = "",
   alt = "",
   className = "",
@@ -11,8 +13,8 @@ export function ResponsiveImage({
     <Image
       src={src}
       alt={alt || "Image"}
-      width={400}
-      height={300}
+      width={width}
+      height={height}
       unoptimized
       className={className}
       {...props}

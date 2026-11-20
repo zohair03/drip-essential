@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Instagram,
   Mail,
   Phone,
   X,
@@ -129,15 +130,15 @@ export default function FooterSection() {
               Social
             </h4>
 
-            {/* <a
-              href="https://www.instagram.com/dripx_watches?utm_source=qr"
+            <a
+              href="https://www.instagram.com/_dripessential.in/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors text-xs md:text-sm"
             >
-              <Instagram className="w-4 h-4 text-zinc-500 shrink-0" />
+              {/* <Instagram /> */}
               <span>Instagram</span>
-            </a> */}
+            </a>
           </div>
         </div>
 
