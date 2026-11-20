@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Heart,
   MessageCircle,
@@ -11,6 +11,43 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProducts } from "../context/ProductContext";
+
+function formatApiProduct(p) {
+  if (!p) return null;
+  const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
+  const rawPrice = p.price ? String(p.price).replace(/,/g, "") : "0";
+  const formattedPrice = !isNaN(Number(rawPrice))
+    ? new Intl.NumberFormat("en-IN").format(Number(rawPrice))
+    : String(p.price || "0");
+
+  const brandName =
+    typeof p.brand === "object" && p.brand !== null
+      ? p.brand.name || "UNKNOWN"
+      : p.brand || "UNKNOWN";
+
+  const image = p.image || "/images/image.png";
+  const images =
+    Array.isArray(p.images) && p.images.length > 0 ? p.images : [image];
+
+  return {
+    id: String(p.id || p._id || ""),
+    brand: brandName.toUpperCase(),
+    brandId: p.brandId || (typeof p.brand === "object" ? p.brand?._id : "") || "",
+    name: p.name || "Product",
+    modelId: p.modelId || "N/A",
+    price: formattedPrice,
+    rawPrice: Number(rawPrice) || 0,
+    image,
+    imagePublicId: p.imagePublicId || "",
+    images,
+    imagePublicIds: p.imagePublicIds || [],
+    description: p.description || "",
+    stock,
+    status:
+      p.status || (stock > 5 ? "Active" : stock > 0 ? "Low Stock" : "Draft"),
+    store_type: p.store_type || "watches",
+  };
+}
 
 const AccordionItem = ({ title, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -52,25 +89,80 @@ export default function WatchPage() {
   const { id } = useParams();
   const { products } = useProducts();
 
-  // Find product by id, fallback to first product if not found
-  const product = products.find((p) => p.id === id) || products[0];
+  const [product, setProduct] = useState(() => {
+    if (!id || !Array.isArray(products)) return null;
+    return products.find((p) => p.id === id) || null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (!id || !Array.isArray(products)) return true;
+    return !products.some((p) => p.id === id);
+  });
+  const [error, setError] = useState(false);
 
   const [mainImage, setMainImage] = useState(
     product?.image || "/imports/IMG_2394.png"
   );
   const [quantity, setQuantity] = useState(1);
 
+  // Fetch exact product by id from database
   useEffect(() => {
     window.scrollTo(0, 0);
 
-    const timer = setTimeout(() => {
-      if (product) {
-        setMainImage(product.image || "/imports/IMG_2394.png");
-        setQuantity(1);
+    if (!id) return;
+
+    // Check if product is already in products context
+    const cached = Array.isArray(products)
+      ? products.find((p) => p.id === id)
+      : null;
+
+    if (cached) {
+      setProduct(cached);
+      setMainImage(cached.image || "/imports/IMG_2394.png");
+      setQuantity(1);
+      setLoading(false);
+      setError(false);
+      return;
+    }
+
+    // Otherwise fetch the specific product from the database
+    let isCancelled = false;
+    setLoading(true);
+    setError(false);
+
+    async function loadProduct() {
+      try {
+        const res = await fetch(`/api/products/${id}`, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Product not found");
+        }
+        const data = await res.json();
+        if (data && data.success && data.product) {
+          if (!isCancelled) {
+            const formatted = formatApiProduct(data.product);
+            setProduct(formatted);
+            setMainImage(formatted.image || "/imports/IMG_2394.png");
+            setQuantity(1);
+            setLoading(false);
+            setError(false);
+          }
+        } else {
+          throw new Error("Product data missing");
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error("Error loading watch:", err);
+          setError(true);
+          setLoading(false);
+        }
       }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [id, product]);
+    }
+
+    loadProduct();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [id, products]);
 
   const handleImageError = (e) => {
     e.currentTarget.src =
@@ -115,14 +207,58 @@ export default function WatchPage() {
       ? product.images
       : [product?.image];
 
-  const displaySimilar = products
-    .filter((p) => p.id !== product?.id && p.status !== "Draft")
-    .slice(0, 4);
+  const displaySimilar = useMemo(() => {
+    if (!product || !Array.isArray(products)) return [];
+    const sameBrand = products.filter(
+      (p) =>
+        p.id !== product.id &&
+        p.brand?.toUpperCase() === product.brand?.toUpperCase() &&
+        p.status !== "Draft"
+    );
+    if (sameBrand.length >= 4) {
+      return sameBrand.slice(0, 4);
+    }
+    const otherWatches = products.filter(
+      (p) =>
+        p.id !== product.id &&
+        p.brand?.toUpperCase() !== product.brand?.toUpperCase() &&
+        p.status !== "Draft"
+    );
+    return [...sameBrand, ...otherWatches].slice(0, 4);
+  }, [product, products]);
 
-  if (!product) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-['Oswald',sans-serif] text-2xl">
-        Product not found
+      <div className="min-h-screen bg-white text-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase font-sans">
+            Loading Timepiece Details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-screen bg-white text-black flex items-center justify-center">
+        <div className="text-center space-y-4 px-6">
+          <h1 className="font-['Oswald',sans-serif] text-3xl uppercase tracking-wider text-black">
+            Timepiece Not Found
+          </h1>
+          <p className="text-xs tracking-widest text-gray-500 uppercase font-sans">
+            The requested timepiece could not be found or is unavailable.
+          </p>
+          <div className="pt-4">
+            <Link
+              href="/watches"
+              className="inline-block border border-black bg-black text-white px-8 py-3 text-xs font-bold tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
+            >
+              Browse All Watches
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

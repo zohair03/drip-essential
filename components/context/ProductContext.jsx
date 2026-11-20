@@ -196,7 +196,7 @@ function formatApiBrand(b, index) {
 const ProductContext = createContext(undefined);
 
 export function ProductProvider({ children }) {
-  const [products, setProducts] = useState(defaultProducts);
+  const [products, setProducts] = useState([]);
   const [featuredBrands, setFeaturedBrands] = useState(defaultFeaturedBrands);
   const [showcaseWatches, setShowcaseWatches] = useState([]);
   const [bestsellerWatches, setBestsellerWatches] = useState([]);

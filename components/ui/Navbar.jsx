@@ -211,7 +211,7 @@ export default function Navbar({ theme = "light" }) {
               </Link>
 
               <a
-                href="/watches"
+                href="/#favourites"
                 onClick={handleBestSellersClick}
                 className="hover:opacity-75 transition-opacity pb-0.5"
               >
@@ -289,7 +289,7 @@ export default function Navbar({ theme = "light" }) {
                   </Link>
 
                   <Link
-                    href="/watches"
+                    href="/#favourites"
                     onClick={() => setIsMenuOpen(false)}
                     className="hover:text-gray-500 transition-colors"
                   >
