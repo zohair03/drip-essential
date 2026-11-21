@@ -68,11 +68,10 @@ const AccordionItem = ({ title, children, defaultOpen = false }) => {
       </div>
 
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen
             ? "max-h-96 opacity-100 mb-5"
             : "max-h-0 opacity-0"
-        }`}
+          }`}
       >
         <div
           className="text-sm text-gray-500 leading-relaxed"
@@ -413,11 +412,11 @@ export default function WatchPage() {
             </button>
 
             <div className="border-t border-gray-200">
-              <AccordionItem title="DESCRIPTION" defaultOpen={true}>
+              {/* <AccordionItem title="DESCRIPTION" defaultOpen={true}>
                 {product.description}
-              </AccordionItem>
+              </AccordionItem> */}
 
-              <AccordionItem title="SPECIFICATIONS">
+              {/* <AccordionItem title="SPECIFICATIONS">
                 <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
                   <div className="font-semibold text-gray-900">Brand</div>
                   <div className="uppercase">{product.brand}</div>
@@ -437,7 +436,7 @@ export default function WatchPage() {
                   <div className="font-semibold text-gray-900">Warranty</div>
                   <div>5 Years International</div>
                 </div>
-              </AccordionItem>
+              </AccordionItem> */}
 
               <AccordionItem title="SHIPPING INFORMATION">
                 <div className="flex items-start gap-3 mb-3">
@@ -446,9 +445,14 @@ export default function WatchPage() {
                     className="text-gray-900 shrink-0 mt-0.5"
                   />
                   <span>
-                    Complimentary insured express shipping worldwide.
-                    Dispatched within 24-48 hours. Signature required upon
-                    delivery.
+                    Shipping policy<br /><br />
+                    🚚 All orders are dispatched within 36 working hours of order confirmation.
+                    <br />
+                    <br />
+                    🎥 For complete transparency, we also share a live packing video before dispatch.
+                    <br />
+                    <br />
+                    📦 Tracking details are shared once your order is shipped.
                   </span>
                 </div>
               </AccordionItem>

@@ -54,6 +54,7 @@ export default function WatchShowcase() {
                   alt={watch.name}
                   widths={[150, 300, 500]}
                   sizes="(max-width: 768px) 150px, (max-width: 1200px) 300px, 400px"
+                  loading="lazy"
                   className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
@@ -95,6 +96,6 @@ export default function WatchShowcase() {
           </button>
         </div>
       </div>
-    </section>
+</section>
   );
 }

@@ -248,7 +248,7 @@ export default function FooterSection() {
 
                   <ul className="list-disc list-inside space-y-1 text-gray-300 text-xs">
                     <li>
-                      We only accept returns/replacements for watches that arrive damaged or defective.
+                      We only accept returns/replacements for watches that arrive with damaged.
                     </li>
                     <li>
                       A clear, uncut, and unedited unboxing video is mandatory as proof.
