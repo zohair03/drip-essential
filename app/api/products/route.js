@@ -200,14 +200,21 @@ export async function GET(request) {
       }
     }
 
-    // Sort order
-    let sortObj = { createdAt: -1 };
+    // Sort order — always append _id as a tiebreaker to guarantee a stable
+    // cursor across pages. Without a unique secondary sort key, MongoDB may
+    // return documents in different orders on each request when the primary
+    // sort field (price, createdAt) has many ties, causing duplicate watch
+    // cards across pages.
+    let sortObj;
     if (sortParam === "price-low" || sortParam === "price-asc") {
-      sortObj = { price: 1 };
+      sortObj = { price: 1, _id: 1 };
     } else if (sortParam === "price-high" || sortParam === "price-desc") {
-      sortObj = { price: -1 };
+      sortObj = { price: -1, _id: -1 };
     } else if (sortParam === "newest") {
-      sortObj = { createdAt: -1 };
+      sortObj = { _id: -1 };
+    } else {
+      // "featured" or default — sort by _id ascending for a consistent order
+      sortObj = { _id: 1 };
     }
 
     const total = await Product.countDocuments(query);
