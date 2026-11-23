@@ -4,7 +4,7 @@ import WatchShowcase from "@/components/sections/WatchShowcase"
 import AllTimeFavourites from "@/components/sections/AllTimeFavSection"
 
 export const metadata = {
-  title: "Drip Essentials | Luxury Watches",
+  title: "Drip Essentials",
   description: "Drip Essentials is your one-stop destination for luxury watches. Shop the latest collections from top brands and find your perfect timepiece today!",
 };
 
