@@ -13,7 +13,7 @@ import {
 import { useProducts } from "../context/ProductContext";
 import { ResponsiveImage } from "../sections/ResponsiveImage";
 
-const ITEMS_PER_PAGE = 16;
+const ITEMS_PER_PAGE = 12;
 
 function formatApiProduct(p) {
   const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
