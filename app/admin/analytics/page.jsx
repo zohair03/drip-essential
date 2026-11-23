@@ -192,7 +192,7 @@ export default function AdminAnalyticsPage() {
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50/70 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                     <th className="py-3 px-3">Watch</th>
-                    <th className="py-3 px-3">Brand</th>
+                    {/* <th className="py-3 px-3">Brand</th> */}
                     <th className="py-3 px-3">Price</th>
                     <th className="py-3 px-3">This Month</th>
                     <th className="py-3 px-3">Total Inquiries</th>
@@ -220,9 +220,9 @@ export default function AdminAnalyticsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-3 font-semibold text-zinc-500 uppercase">
+                      {/* <td className="py-3 px-3 font-semibold text-zinc-500 uppercase">
                         {item.brandName || "—"}
-                      </td>
+                      </td> */}
                       <td className="py-3 px-3 font-bold text-zinc-900">
                         {item.price
                           ? `₹${new Intl.NumberFormat("en-IN").format(item.price)}`

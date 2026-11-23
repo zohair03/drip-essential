@@ -24,7 +24,7 @@ export default function AdminLoginPage() {
           router.replace("/admin/dashboard");
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         if (mounted) setCheckingExisting(false);
       });
@@ -76,10 +76,9 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         {/* Brand Card Header */}
         <div className="text-center mb-8">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-white font-black text-sm tracking-widest shadow-md mb-4">
-            DE
+          <div className="mx-auto flex h-25 w-25 items-center justify-center rounded-2xl bg-white bg-[url('/images/logo.png')] bg-contain bg-center bg-no-repeat text-white font-black text-sm tracking-widest shadow-md mb-4">
           </div>
-          <h1 className="text-2xl font-extrabold tracking-wider uppercase text-zinc-950 font-serif">
+          <h1 className="text-2xl font-extrabold tracking-wider uppercase text-zinc-950 font-sans">
             Drip Essentials
           </h1>
           <p className="text-xs font-semibold text-zinc-500 tracking-widest uppercase mt-1">
@@ -90,7 +89,7 @@ export default function AdminLoginPage() {
         {/* Login Box */}
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-lg font-bold text-zinc-900">Sign in to Console</h2>
+            <h2 className="text-lg font-bold text-zinc-900">Admin Login</h2>
             <p className="text-xs text-zinc-500 mt-1">
               Authorized personnel only. Sessions expire after 7 days.
             </p>
@@ -175,12 +174,12 @@ export default function AdminLoginPage() {
           </form>
 
           {/* Quick Credential Hint for convenience */}
-          <div className="mt-6 pt-5 border-t border-zinc-100 text-center">
+          {/* <div className="mt-6 pt-5 border-t border-zinc-100 text-center">
             <p className="text-[11px] text-zinc-400 font-mono">
               Default: <span className="text-zinc-600 font-semibold">admin@dripessentials.com</span> /{" "}
               <span className="text-zinc-600 font-semibold">Admin@Drip2026</span>
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Back to storefront link */}

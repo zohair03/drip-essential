@@ -60,10 +60,10 @@ export default function AdminNavbar({
         )}
 
         {/* Database Status indicator */}
-        <div className="hidden lg:flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/60 px-3 py-1 text-[11px] font-semibold text-emerald-800">
+        {/* <div className="hidden lg:flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/60 px-3 py-1 text-[11px] font-semibold text-emerald-800">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>MongoDB Connected</span>
-        </div>
+        </div> */}
 
         {/* Admin initials avatar */}
         <div className="flex items-center gap-2 border-l border-zinc-200 pl-3">

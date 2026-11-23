@@ -137,13 +137,13 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* System Integrations Status */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs space-y-4">
+      {/* <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 pb-2 border-b border-zinc-100">
           Connected Backend Services
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* MongoDB Atlas */}
+          
           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
@@ -161,7 +161,7 @@ export default function AdminSettingsPage() {
             </span>
           </div>
 
-          {/* Cloudinary */}
+          
           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
@@ -179,7 +179,7 @@ export default function AdminSettingsPage() {
             </span>
           </div>
 
-          {/* JWT Auth */}
+          
           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
@@ -197,7 +197,7 @@ export default function AdminSettingsPage() {
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
