@@ -35,7 +35,7 @@ const oswald = Oswald({
 
 export const metadata = {
   title: "Drip Essentials",
-  description: "Luxury Watches & Accessories",
+  description: "",
 };
 
 export default function RootLayout({ children }) {
