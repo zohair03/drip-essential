@@ -18,6 +18,7 @@ const productUpdateSchema = z.object({
   images: z.array(z.string()).optional(),
   imagePublicIds: z.array(z.string()).optional(),
   status: z.enum(["Active", "Draft"]).optional(),
+  order: z.coerce.number().int().optional(),
 });
 
 export async function GET(request, { params }) {
@@ -60,6 +61,7 @@ export async function GET(request, { params }) {
         id: product._id.toString(),
         _id: undefined,
         __v: undefined,
+        order: product.order ?? 0,
         brand: product.brand?.name || "UNKNOWN",
         brandId: product.brand?._id?.toString() || String(product.brand),
         brandData: product.brand,
@@ -189,6 +191,7 @@ export async function PUT(request, { params }) {
         id: populated._id.toString(),
         _id: undefined,
         __v: undefined,
+        order: populated.order ?? 0,
         brand: populated.brand?.name || "UNKNOWN",
         brandId: populated.brand?._id?.toString() || String(populated.brand),
         brandData: populated.brand,

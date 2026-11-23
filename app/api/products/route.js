@@ -17,6 +17,7 @@ const productCreateSchema = z.object({
   images: z.array(z.string()).optional().default([]),
   imagePublicIds: z.array(z.string()).optional().default([]),
   status: z.enum(["Active", "Draft"]).optional().default("Active"),
+  order: z.coerce.number().int().optional(),
 });
 
 export async function GET(request) {
@@ -29,9 +30,15 @@ export async function GET(request) {
     const statusParam = searchParams.get("status")?.trim();
     const sortParam = searchParams.get("sort") || "featured";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
 
     const admin = await getAuthenticatedAdmin(request);
+    const isAdminReq = (admin || searchParams.get("admin") === "true");
+
+    const rawLimit = searchParams.get("limit");
+    const isAll = searchParams.get("all") === "true" || rawLimit === "all";
+    const parsedLimit = parseInt(rawLimit || "50", 10);
+    const maxLimit = isAdminReq ? 1000 : 200;
+    const limit = isAll ? 1000 : Math.min(maxLimit, Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit));
 
     // Query filter
     const query = {};
@@ -212,9 +219,10 @@ export async function GET(request) {
       sortObj = { price: -1, _id: -1 };
     } else if (sortParam === "newest") {
       sortObj = { _id: -1 };
+    } else if (sortParam === "order" || sortParam === "featured" || !sortParam) {
+      sortObj = { order: 1, _id: 1 };
     } else {
-      // "featured" or default — sort by _id ascending for a consistent order
-      sortObj = { _id: 1 };
+      sortObj = { order: 1, _id: 1 };
     }
 
     const total = await Product.countDocuments(query);
@@ -238,6 +246,7 @@ export async function GET(request) {
         id: p._id.toString(),
         _id: undefined,
         __v: undefined,
+        order: p.order ?? 0,
         brand: brandName,
         brandId: typeof brandObj === "object" && brandObj !== null
           ? brandObj._id?.toString()
@@ -324,6 +333,12 @@ export async function POST(request) {
       }
     }
 
+    let finalOrder = parsed.data.order;
+    if (finalOrder === undefined || finalOrder === null) {
+      const highest = await Product.findOne({}).sort({ order: -1 }).select("order");
+      finalOrder = (highest?.order || 0) + 1;
+    }
+
     const product = await Product.create({
       ...parsed.data,
       brand: brandId,
@@ -331,6 +346,7 @@ export async function POST(request) {
       imagePublicId: mainPublicId,
       images: imagesList,
       imagePublicIds: publicIdsList,
+      order: finalOrder,
     });
 
     const populated = await Product.findById(product._id)
@@ -346,6 +362,7 @@ export async function POST(request) {
           id: populated._id.toString(),
           _id: undefined,
           __v: undefined,
+          order: populated.order ?? 0,
           brand: populated.brand?.name || "UNKNOWN",
           brandId: populated.brand?._id?.toString() || String(populated.brand),
           brandData: populated.brand,
@@ -357,6 +374,83 @@ export async function POST(request) {
     console.error("Product create error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to create product" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request) {
+  try {
+    const admin = await getAuthenticatedAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { id, order, status, items } = body;
+
+    await connectDB();
+
+    // Support batch reorder: { items: [{ id, order }, ...] }
+    if (Array.isArray(items) && items.length > 0) {
+      const validUpdates = items.filter(
+        (it) => it && it.id && mongoose.Types.ObjectId.isValid(it.id)
+      );
+
+      if (validUpdates.length > 0) {
+        const bulkOps = validUpdates.map((it) => ({
+          updateOne: {
+            filter: { _id: new mongoose.Types.ObjectId(it.id) },
+            update: { $set: { order: Number(it.order) } },
+          },
+        }));
+
+        await Product.bulkWrite(bulkOps);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Product orders updated successfully",
+      });
+    }
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid product ID" },
+        { status: 400 }
+      );
+    }
+
+    const product = await Product.findById(new mongoose.Types.ObjectId(id));
+    if (!product) {
+      return NextResponse.json(
+        { success: false, error: "Product not found" },
+        { status: 404 }
+      );
+    }
+
+    if (order !== undefined) product.order = Number(order);
+    if (status !== undefined) product.status = status;
+
+    await product.save();
+
+    return NextResponse.json({
+      success: true,
+      message: "Product updated successfully",
+      product: {
+        id: product._id.toString(),
+        name: product.name,
+        order: product.order,
+        status: product.status,
+      },
+    });
+  } catch (error) {
+    console.error("Product PUT error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to update product" },
       { status: 500 }
     );
   }

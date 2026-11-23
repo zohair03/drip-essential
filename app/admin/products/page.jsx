@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import OrderSortControl from "@/components/admin/OrderSortControl";
 import {
   Watch,
   Plus,
@@ -13,6 +14,7 @@ import {
   ExternalLink,
   Loader2,
   AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function AdminProductsPage() {
@@ -23,9 +25,10 @@ export default function AdminProductsPage() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedStock, setSelectedStock] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState("order");
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   // Fetch Brands for filter dropdown
   useEffect(() => {
@@ -42,7 +45,8 @@ export default function AdminProductsPage() {
     let active = true;
     const params = new URLSearchParams();
     params.set("admin", "true");
-    params.set("limit", "100");
+    params.set("limit", "1000");
+    params.set("all", "true");
     if (search.trim()) params.set("search", search.trim());
     if (selectedBrand !== "all") params.set("brand", selectedBrand);
     if (selectedStatus !== "all") params.set("status", selectedStatus);
@@ -77,7 +81,8 @@ export default function AdminProductsPage() {
       setLoading(true);
       const params = new URLSearchParams();
       params.set("admin", "true");
-      params.set("limit", "100");
+      params.set("limit", "1000");
+      params.set("all", "true");
       if (search.trim()) params.set("search", search.trim());
       if (selectedBrand !== "all") params.set("brand", selectedBrand);
       if (selectedStatus !== "all") params.set("status", selectedStatus);
@@ -100,6 +105,86 @@ export default function AdminProductsPage() {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMoveItem = async (index, direction) => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= products.length) return;
+
+    const newProducts = [...products];
+    const [movedProduct] = newProducts.splice(index, 1);
+    newProducts.splice(targetIndex, 0, movedProduct);
+
+    // Normalize sequential orders 1..N
+    const resequenced = newProducts.map((p, idx) => ({
+      ...p,
+      order: idx + 1,
+    }));
+
+    // Optimistic UI update
+    setProducts(resequenced);
+
+    try {
+      const res = await fetch("/api/products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: resequenced.map((p) => ({ id: p.id, order: p.order })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update product orders");
+      }
+      setSuccessMsg("Product order updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error("Product order move error:", err);
+      fetchProducts();
+    }
+  };
+
+  const handleOrderChange = async (product, newOrder) => {
+    const orderNum = parseInt(newOrder, 10);
+    if (isNaN(orderNum) || orderNum === product.order || orderNum < 1) return;
+
+    const currentIndex = products.findIndex((p) => p.id === product.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = Math.max(0, Math.min(products.length - 1, orderNum - 1));
+    if (currentIndex === targetIndex) return;
+
+    const newProducts = [...products];
+    const [movedProduct] = newProducts.splice(currentIndex, 1);
+    newProducts.splice(targetIndex, 0, movedProduct);
+
+    // Normalize sequential orders 1..N
+    const resequenced = newProducts.map((p, idx) => ({
+      ...p,
+      order: idx + 1,
+    }));
+
+    // Optimistic UI update
+    setProducts(resequenced);
+
+    try {
+      const res = await fetch("/api/products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: resequenced.map((p) => ({ id: p.id, order: p.order })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update product orders");
+      }
+      setSuccessMsg("Product order updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error("Product order change error:", err);
+      fetchProducts();
     }
   };
 
@@ -145,6 +230,13 @@ export default function AdminProductsPage() {
           <span>Add New Watch</span>
         </Link>
       </div>
+
+      {successMsg && (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800 animate-in fade-in duration-200">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs space-y-4">
@@ -214,6 +306,7 @@ export default function AdminProductsPage() {
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-transparent text-zinc-900 font-bold focus:outline-none cursor-pointer"
             >
+              <option value="order">Custom Order</option>
               <option value="newest">Newest First</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
@@ -239,6 +332,7 @@ export default function AdminProductsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50/70 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  <th className="py-3.5 px-4 w-28">Order</th>
                   <th className="py-3.5 px-4">Watch</th>
                   <th className="py-3.5 px-4">Brand</th>
                   <th className="py-3.5 px-4">Price (INR)</th>
@@ -249,8 +343,20 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 font-medium">
-                {products.map((p) => (
+                {products.map((p, index) => (
                   <tr key={p.id} className="hover:bg-zinc-50/50 transition">
+                    {/* Order Control */}
+                    <td className="py-3 px-4">
+                      <OrderSortControl
+                        order={p.order ?? index + 1}
+                        index={index}
+                        totalItems={products.length}
+                        onMoveUp={() => handleMoveItem(index, "up")}
+                        onMoveDown={() => handleMoveItem(index, "down")}
+                        onOrderChange={(newOrder) => handleOrderChange(p, newOrder)}
+                      />
+                    </td>
+
                     {/* Watch Name & Thumbnail */}
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">

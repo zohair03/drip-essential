@@ -174,6 +174,7 @@ function formatApiProduct(p) {
     imagePublicIds: p.imagePublicIds || [],
     description: p.description || "",
     stock,
+    order: typeof p.order === "number" ? p.order : 0,
     status:
       p.status || (stock > 5 ? "Active" : stock > 0 ? "Low Stock" : "Draft"),
     store_type: p.store_type || "watches",
