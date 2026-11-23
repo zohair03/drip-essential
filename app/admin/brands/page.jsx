@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import OrderSortControl from "@/components/admin/OrderSortControl";
 import {
   Layers,
   Plus,
@@ -50,6 +51,64 @@ export default function AdminBrandsPage() {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMoveItem = async (index, direction) => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= brands.length) return;
+
+    const newBrands = [...brands];
+    const [movedBrand] = newBrands.splice(index, 1);
+    newBrands.splice(targetIndex, 0, movedBrand);
+
+    // Normalize sequential orders 1..N
+    const resequenced = newBrands.map((b, idx) => ({
+      ...b,
+      order: idx + 1,
+    }));
+
+    // Optimistic UI update
+    setBrands(resequenced);
+
+    try {
+      const res = await fetch("/api/brands", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: resequenced.map((b) => ({ id: b.id, order: b.order })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update brand orders");
+      }
+    } catch (err) {
+      console.error("Brand order move error:", err);
+      fetchBrands();
+    }
+  };
+
+  const handleOrderChange = async (brand, newOrder) => {
+    const orderNum = parseInt(newOrder, 10);
+    if (isNaN(orderNum) || orderNum === brand.order) return;
+
+    try {
+      const res = await fetch("/api/brands", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brand.id, order: orderNum }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBrands((prev) =>
+          prev
+            .map((b) => (b.id === brand.id ? { ...b, order: orderNum } : b))
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        );
+      }
+    } catch (err) {
+      console.error("Brand order change error:", err);
     }
   };
 
@@ -115,17 +174,30 @@ export default function AdminBrandsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50/70 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  <th className="py-3.5 px-4 w-28">Order</th>
                   <th className="py-3.5 px-4">Brand Logo</th>
                   <th className="py-3.5 px-4">Brand Name</th>
-                  <th className="py-3.5 px-4">Slug</th>
+                  {/* <th className="py-3.5 px-4">Slug</th> */}
                   <th className="py-3.5 px-4">Associated Watches</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 font-medium">
-                {brands.map((b) => (
+                {brands.map((b, index) => (
                   <tr key={b.id} className="hover:bg-zinc-50/50 transition">
+                    {/* Order Input & Up/Down Stepper */}
+                    <td className="py-3 px-4">
+                      <OrderSortControl
+                        order={b.order ?? index + 1}
+                        index={index}
+                        totalItems={brands.length}
+                        onMoveUp={() => handleMoveItem(index, "up")}
+                        onMoveDown={() => handleMoveItem(index, "down")}
+                        onOrderChange={(newOrder) => handleOrderChange(b, newOrder)}
+                      />
+                    </td>
+
                     {/* Brand Image */}
                     <td className="py-3 px-4">
                       <div className="h-10 w-16 rounded-md border border-zinc-200 bg-zinc-50 flex items-center justify-center p-1 overflow-hidden">
@@ -156,9 +228,9 @@ export default function AdminBrandsPage() {
                     </td>
 
                     {/* Slug */}
-                    <td className="py-3 px-4 font-mono text-[11px] text-zinc-500">
+                    {/* <td className="py-3 px-4 font-mono text-[11px] text-zinc-500">
                       /watches/{b.slug}
-                    </td>
+                    </td> */}
 
                     {/* Product Count */}
                     <td className="py-3 px-4">

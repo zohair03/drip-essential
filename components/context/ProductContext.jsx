@@ -188,7 +188,7 @@ function formatApiBrand(b, index) {
     logoUrl: b.image || "/images/image.png",
     image: b.image || "/images/image.png",
     isVisible: b.status !== "Inactive",
-    order: index + 1,
+    order: typeof b.order === "number" ? b.order : index + 1,
     productCount: b.productCount || 0,
   };
 }

@@ -12,6 +12,7 @@ const brandCreateSchema = z.object({
   image: z.string().optional().default(""),
   imagePublicId: z.string().optional().default(""),
   status: z.enum(["Active", "Inactive"]).optional().default("Active"),
+  order: z.coerce.number().int().optional(),
 });
 
 export async function GET(request) {
@@ -23,7 +24,9 @@ export async function GET(request) {
     const admin = await getAuthenticatedAdmin(request);
     const query = includeInactive && admin ? {} : { status: "Active" };
 
-    const brands = await Brand.find(query).sort({ name: 1 }).lean();
+    const brands = await Brand.find(query)
+      .sort({ order: 1, name: 1, _id: 1 })
+      .lean();
 
     // Attach product count to each brand
     const brandIds = brands.map((b) => b._id);
@@ -41,6 +44,7 @@ export async function GET(request) {
       ...b,
       id: b._id.toString(),
       _id: undefined,
+      order: b.order ?? 0,
       productCount: countMap[b._id.toString()] || 0,
     }));
 
@@ -94,9 +98,16 @@ export async function POST(request) {
       );
     }
 
+    let finalOrder = parsed.data.order;
+    if (finalOrder === undefined || finalOrder === null) {
+      const highest = await Brand.findOne({}).sort({ order: -1 }).select("order");
+      finalOrder = (highest?.order || 0) + 1;
+    }
+
     const brand = await Brand.create({
       ...parsed.data,
       slug,
+      order: finalOrder,
     });
 
     return NextResponse.json(
@@ -111,6 +122,7 @@ export async function POST(request) {
           image: brand.image,
           imagePublicId: brand.imagePublicId,
           status: brand.status,
+          order: brand.order,
           productCount: 0,
         },
       },
@@ -120,6 +132,83 @@ export async function POST(request) {
     console.error("Brand create error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to create brand" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request) {
+  try {
+    const admin = await getAuthenticatedAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { id, order, status, items } = body;
+
+    await connectDB();
+
+    // Support batch reorder: { items: [{ id, order }, ...] }
+    if (Array.isArray(items) && items.length > 0) {
+      const validUpdates = items.filter(
+        (it) => it && it.id && mongoose.Types.ObjectId.isValid(it.id)
+      );
+
+      if (validUpdates.length > 0) {
+        const bulkOps = validUpdates.map((it) => ({
+          updateOne: {
+            filter: { _id: it.id },
+            update: { $set: { order: Number(it.order) } },
+          },
+        }));
+
+        await Brand.bulkWrite(bulkOps);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Brand orders updated successfully",
+      });
+    }
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid brand ID" },
+        { status: 400 }
+      );
+    }
+
+    const brand = await Brand.findById(id);
+    if (!brand) {
+      return NextResponse.json(
+        { success: false, error: "Brand not found" },
+        { status: 404 }
+      );
+    }
+
+    if (order !== undefined) brand.order = Number(order);
+    if (status !== undefined) brand.status = status;
+
+    await brand.save();
+
+    return NextResponse.json({
+      success: true,
+      message: "Brand updated successfully",
+      brand: {
+        id: brand._id.toString(),
+        name: brand.name,
+        order: brand.order,
+        status: brand.status,
+      },
+    });
+  } catch (error) {
+    console.error("Brand PUT error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to update brand" },
       { status: 500 }
     );
   }

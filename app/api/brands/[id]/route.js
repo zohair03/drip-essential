@@ -13,6 +13,7 @@ const brandUpdateSchema = z.object({
   image: z.string().optional(),
   imagePublicId: z.string().optional(),
   status: z.enum(["Active", "Inactive"]).optional(),
+  order: z.coerce.number().int().optional(),
 });
 
 export async function GET(request, { params }) {
@@ -133,6 +134,7 @@ export async function PUT(request, { params }) {
         image: existing.image,
         imagePublicId: existing.imagePublicId,
         status: existing.status,
+        order: existing.order ?? 0,
       },
     });
   } catch (error) {
