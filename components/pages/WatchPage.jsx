@@ -189,11 +189,27 @@ export default function WatchPage() {
       console.error("Error tracking click:", e);
     }
 
-    let message = `I'm interested in buying the ${product.name} (${product.brand})`;
+    const productUrl =
+      typeof window !== "undefined" && window.location?.href
+        ? window.location.href
+        : `https://dripessential.in/product/${product.id}`;
+
+    const lines = [
+      "Hi Drip Essential,",
+      "",
+      "I am interested in purchasing this watch:",
+      `*Brand:* ${product.brand}`,
+      `*Model:* ${product.name}`,
+      `*Price:* ₹${product.price}`,
+    ];
 
     if (quantity > 1) {
-      message += ` (Quantity: ${quantity})`;
+      lines.push(`*Quantity:* ${quantity}`);
     }
+
+    lines.push("", "*Product Link:*", productUrl);
+
+    const message = lines.join("\n");
 
     window.open(
       `https://wa.me/919137722174?text=${encodeURIComponent(message)}`,
