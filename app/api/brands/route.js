@@ -161,7 +161,7 @@ export async function PUT(request) {
       if (validUpdates.length > 0) {
         const bulkOps = validUpdates.map((it) => ({
           updateOne: {
-            filter: { _id: it.id },
+            filter: { _id: new mongoose.Types.ObjectId(it.id) },
             update: { $set: { order: Number(it.order) } },
           },
         }));
@@ -182,7 +182,7 @@ export async function PUT(request) {
       );
     }
 
-    const brand = await Brand.findById(id);
+    const brand = await Brand.findById(new mongoose.Types.ObjectId(id));
     if (!brand) {
       return NextResponse.json(
         { success: false, error: "Brand not found" },

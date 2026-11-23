@@ -10,6 +10,7 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
+  CheckCircle2,
   ExternalLink,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ export default function AdminBrandsPage() {
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -83,6 +85,8 @@ export default function AdminBrandsPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to update brand orders");
       }
+      setSuccessMsg("Brand order updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
       console.error("Brand order move error:", err);
       fetchBrands();
@@ -91,24 +95,44 @@ export default function AdminBrandsPage() {
 
   const handleOrderChange = async (brand, newOrder) => {
     const orderNum = parseInt(newOrder, 10);
-    if (isNaN(orderNum) || orderNum === brand.order) return;
+    if (isNaN(orderNum) || orderNum === brand.order || orderNum < 1) return;
+
+    const currentIndex = brands.findIndex((b) => b.id === brand.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = Math.max(0, Math.min(brands.length - 1, orderNum - 1));
+    if (currentIndex === targetIndex) return;
+
+    const newBrands = [...brands];
+    const [movedBrand] = newBrands.splice(currentIndex, 1);
+    newBrands.splice(targetIndex, 0, movedBrand);
+
+    // Normalize sequential orders 1..N
+    const resequenced = newBrands.map((b, idx) => ({
+      ...b,
+      order: idx + 1,
+    }));
+
+    // Optimistic UI update
+    setBrands(resequenced);
 
     try {
       const res = await fetch("/api/brands", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: brand.id, order: orderNum }),
+        body: JSON.stringify({
+          items: resequenced.map((b) => ({ id: b.id, order: b.order })),
+        }),
       });
       const data = await res.json();
-      if (data.success) {
-        setBrands((prev) =>
-          prev
-            .map((b) => (b.id === brand.id ? { ...b, order: orderNum } : b))
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        );
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update brand orders");
       }
+      setSuccessMsg("Brand order updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
       console.error("Brand order change error:", err);
+      fetchBrands();
     }
   };
 
@@ -156,6 +180,13 @@ export default function AdminBrandsPage() {
           <span>Add New Brand</span>
         </Link>
       </div>
+
+      {successMsg && (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800 animate-in fade-in duration-200">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       {/* Brand Grid / Table */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white overflow-hidden shadow-xs">

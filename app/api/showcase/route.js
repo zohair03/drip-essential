@@ -194,7 +194,7 @@ export async function PUT(request) {
       if (validUpdates.length > 0) {
         const bulkOps = validUpdates.map((it) => ({
           updateOne: {
-            filter: { _id: it.id, type: "showcase" },
+            filter: { _id: new mongoose.Types.ObjectId(it.id), type: "showcase" },
             update: { $set: { order: Number(it.order) } },
           },
         }));

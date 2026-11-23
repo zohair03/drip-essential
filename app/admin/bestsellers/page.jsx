@@ -197,24 +197,44 @@ export default function BestSellersAdminPage() {
 
   const handleOrderChange = async (item, newOrder) => {
     const orderNum = parseInt(newOrder, 10);
-    if (isNaN(orderNum) || orderNum === item.order) return;
+    if (isNaN(orderNum) || orderNum === item.order || orderNum < 1) return;
+
+    const currentIndex = items.findIndex((it) => it.id === item.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = Math.max(0, Math.min(items.length - 1, orderNum - 1));
+    if (currentIndex === targetIndex) return;
+
+    const newItems = [...items];
+    const [movedItem] = newItems.splice(currentIndex, 1);
+    newItems.splice(targetIndex, 0, movedItem);
+
+    // Normalize sequential orders 1..N
+    const resequenced = newItems.map((it, idx) => ({
+      ...it,
+      order: idx + 1,
+    }));
+
+    // Optimistic UI update
+    setItems(resequenced);
 
     try {
       const res = await fetch("/api/bestsellers", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: item.id, order: orderNum }),
+        body: JSON.stringify({
+          items: resequenced.map((it) => ({ id: it.id, order: it.order })),
+        }),
       });
       const data = await res.json();
-      if (data.success) {
-        setItems((prev) =>
-          prev
-            .map((it) => (it.id === item.id ? { ...it, order: orderNum } : it))
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        );
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update order");
       }
+      setSuccessMsg("Bestseller orders updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
       console.error("Order change error:", err);
+      fetchBestsellerItems();
     }
   };
 
