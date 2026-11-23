@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Bebas_Neue, Montserrat, Oswald } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import Providers from "./Providers";
 import ClientLayout from "./ClientLayout";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }) {
             <ClientLayout>{children}</ClientLayout>
           </Suspense>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
