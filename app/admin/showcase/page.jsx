@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import OrderSortControl from "@/components/admin/OrderSortControl";
 import {
   Sparkles,
   Plus,
@@ -162,9 +163,44 @@ export default function ShowcaseAdminPage() {
     }
   };
 
+  const handleMoveItem = async (index, direction) => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+
+    const newItems = [...items];
+    const [movedItem] = newItems.splice(index, 1);
+    newItems.splice(targetIndex, 0, movedItem);
+
+    // Normalize sequential orders 1..N
+    const resequenced = newItems.map((it, idx) => ({
+      ...it,
+      order: idx + 1,
+    }));
+
+    // Optimistic UI update
+    setItems(resequenced);
+
+    try {
+      const res = await fetch("/api/showcase", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: resequenced.map((it) => ({ id: it.id, order: it.order })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update order");
+      }
+    } catch (err) {
+      console.error("Order move error:", err);
+      fetchShowcaseItems();
+    }
+  };
+
   const handleOrderChange = async (item, newOrder) => {
     const orderNum = parseInt(newOrder, 10);
-    if (isNaN(orderNum)) return;
+    if (isNaN(orderNum) || orderNum === item.order) return;
 
     try {
       const res = await fetch("/api/showcase", {
@@ -177,7 +213,7 @@ export default function ShowcaseAdminPage() {
         setItems((prev) =>
           prev
             .map((it) => (it.id === item.id ? { ...it, order: orderNum } : it))
-            .sort((a, b) => a.order - b.order)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         );
       }
     } catch (err) {
@@ -340,7 +376,7 @@ export default function ShowcaseAdminPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-neutral-50/75 border-b border-zinc-200/80 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 <tr>
-                  <th className="py-3 px-4 w-20">Order</th>
+                  <th className="py-3 px-4 w-28">Order</th>
                   <th className="py-3 px-4">Watch</th>
                   <th className="py-3 px-4">Brand</th>
                   <th className="py-3 px-4">Price</th>
@@ -357,18 +393,16 @@ export default function ShowcaseAdminPage() {
                       key={item.id}
                       className="hover:bg-neutral-50/50 transition-colors group"
                     >
-                      {/* Order Input */}
+                      {/* Order Input & Up/Down Stepper */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="1"
-                            max="999"
-                            value={item.order ?? index + 1}
-                            onChange={(e) => handleOrderChange(item, e.target.value)}
-                            className="w-12 text-center py-1 border border-neutral-200 rounded font-semibold text-neutral-900 focus:outline-none focus:border-neutral-900 text-xs"
-                          />
-                        </div>
+                        <OrderSortControl
+                          order={item.order ?? index + 1}
+                          index={index}
+                          totalItems={items.length}
+                          onMoveUp={() => handleMoveItem(index, "up")}
+                          onMoveDown={() => handleMoveItem(index, "down")}
+                          onOrderChange={(newOrder) => handleOrderChange(item, newOrder)}
+                        />
                       </td>
 
                       {/* Watch Image & Name */}

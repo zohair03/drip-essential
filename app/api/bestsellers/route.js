@@ -24,7 +24,7 @@ export async function GET(request) {
         path: "product",
         populate: { path: "brand", select: "name slug" },
       })
-      .sort({ order: 1, createdAt: -1 })
+      .sort({ order: 1, createdAt: -1, _id: 1 })
       .lean();
 
     // Filter out items whose product was deleted or is Draft for public users
@@ -181,7 +181,32 @@ export async function PUT(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { id, order, status } = body;
+    const { id, order, status, items } = body;
+
+    await connectDB();
+
+    // Support batch reorder: { items: [{ id, order }, ...] }
+    if (Array.isArray(items) && items.length > 0) {
+      const validUpdates = items.filter(
+        (it) => it && it.id && mongoose.Types.ObjectId.isValid(it.id)
+      );
+
+      if (validUpdates.length > 0) {
+        const bulkOps = validUpdates.map((it) => ({
+          updateOne: {
+            filter: { _id: it.id, type: "bestseller" },
+            update: { $set: { order: Number(it.order) } },
+          },
+        }));
+
+        await FeaturedItem.bulkWrite(bulkOps);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Order updated successfully",
+      });
+    }
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -189,8 +214,6 @@ export async function PUT(request) {
         { status: 400 }
       );
     }
-
-    await connectDB();
 
     const item = await FeaturedItem.findOne({ _id: id, type: "bestseller" });
     if (!item) {
