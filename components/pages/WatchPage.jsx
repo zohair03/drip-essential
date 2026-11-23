@@ -198,16 +198,16 @@ export default function WatchPage() {
       "Hi Drip Essential,",
       "",
       "I am interested in purchasing this watch:",
-      `*Brand:* ${product.brand}`,
-      `*Model:* ${product.name}`,
-      `*Price:* ₹${product.price}`,
+      `Brand: ${product.brand}`,
+      `Model: ${product.name}`,
+      `Price: ₹${product.price}`,
     ];
 
     if (quantity > 1) {
-      lines.push(`*Quantity:* ${quantity}`);
+      lines.push(`Quantity: ${quantity}`);
     }
 
-    lines.push("", "*Product Link:*", productUrl);
+    lines.push("", "Product Link:", productUrl);
 
     const message = lines.join("\n");
 
