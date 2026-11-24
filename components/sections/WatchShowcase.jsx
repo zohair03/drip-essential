@@ -48,13 +48,14 @@ export default function WatchShowcase() {
                   <Heart className="w-3.5 h-3.5 md:w-5 md:h-5 text-black" />
                 </button>
 
-                {/* Watch Image */}
+                {/* Watch Image — first 2 above fold, rest lazy */}
                 <ResponsiveImage
                   src={watch.image}
                   alt={watch.name}
-                  widths={[150, 300, 500]}
-                  sizes="(max-width: 768px) 150px, (max-width: 1200px) 300px, 400px"
-                  loading="lazy"
+                  width={400}
+                  height={400}
+                  priority={index < 2}
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                   className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                 />
               </div>

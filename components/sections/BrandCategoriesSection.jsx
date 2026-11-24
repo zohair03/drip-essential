@@ -59,8 +59,7 @@ export function BrandCategoriesSection() {
                     width={190}
                     src={brand.image || "/images/image.png"}
                     alt={brand.name}
-                    widths={[150, 200, 500]}
-                    sizes="(max-width: 768px) 200px, 400px"
+                    sizes="(max-width: 768px) 190px, 190px"
                     className="max-w-[90%] max-h-[90%] object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>

@@ -2,14 +2,31 @@
 import { motion } from "motion/react";
 import { Truck, ShieldCheck, Package } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HeroSection() {
   return (
     <div className="flex flex-col min-h-screen justify-between bg-white overflow-hidden relative">
-      
-      {/* Background Image Container - Anchored right on mobile to leave left side clear for text */}
-      <div 
-        className="absolute inset-0 z-0 bg-[url('/images/mobilehero.webp')] md:bg-[url('/images/hero-image.webp')] bg-cover bg-[85%_top] sm:bg-[80%_center] md:bg-top pointer-events-none"
+
+      {/* LCP Hero Background — explicit <img> so browser can fetch eagerly with high priority.
+          Mobile image shown below md, desktop image shown at md+. Both are priority-loaded. */}
+      <Image
+        src="/images/mobilehero.webp"
+        alt="Drip Essential luxury watches"
+        fill
+        priority
+        fetchPriority="high"
+        className="object-cover object-[85%_top] sm:object-[80%_center] md:object-top md:hidden pointer-events-none z-0"
+        sizes="100vw"
+      />
+      <Image
+        src="/images/hero-image.webp"
+        alt="Drip Essential luxury watches"
+        fill
+        priority
+        fetchPriority="high"
+        className="object-cover object-top hidden md:block pointer-events-none z-0"
+        sizes="100vw"
       />
 
       {/* Top spacer to push content below the absolute header */}

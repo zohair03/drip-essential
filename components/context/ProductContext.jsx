@@ -206,7 +206,9 @@ export function ProductProvider({ children }) {
   const fetchProducts = useCallback(async () => {
     try {
       const [productsRes, brandsRes, showcaseRes, bestsellersRes] = await Promise.all([
-        fetch("/api/products?limit=200", { cache: "no-store" }).catch(() => null),
+        // Limit to 50 products for the global context — the WatchesCollection page
+        // fetches its own paginated results from the API independently.
+        fetch("/api/products?limit=50", { cache: "no-store" }).catch(() => null),
         fetch("/api/brands", { cache: "no-store" }).catch(() => null),
         fetch("/api/showcase", { cache: "no-store" }).catch(() => null),
         fetch("/api/bestsellers", { cache: "no-store" }).catch(() => null),

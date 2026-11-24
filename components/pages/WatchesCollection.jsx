@@ -685,9 +685,11 @@ export default function WatchesCollectionPage() {
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12">
-                  {paginatedProducts.map((product) => {
+                  {paginatedProducts.map((product, productIndex) => {
                     const rawPrice = getProductPrice(product.price);
                     const displayOriginalPrice = rawPrice * 1.15;
+                    // First 3 cards are above-fold — load eagerly for best LCP
+                    const isAboveFold = productIndex < 3;
 
                     return (
                       <div
@@ -709,8 +711,10 @@ export default function WatchesCollectionPage() {
                           <ResponsiveImage
                             src={product.image}
                             alt={product.name}
-                            widths={[150, 300, 500]}
-                            sizes="(max-width: 640px) 150px, (max-width: 1024px) 300px, 400px"
+                            width={400}
+                            height={400}
+                            priority={isAboveFold}
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                             className="w-4/5 h-4/5 object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
                           />
 

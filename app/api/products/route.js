@@ -228,7 +228,13 @@ export async function GET(request) {
     const total = await Product.countDocuments(query);
     const skip = (page - 1) * limit;
 
-    const products = await Product.find(query)
+    // For non-admin requests, project only the fields needed for product cards.
+    // This significantly reduces the MongoDB → Next.js → browser payload.
+    const projection = isAdminReq
+      ? {}
+      : { name: 1, brand: 1, price: 1, stock: 1, image: 1, images: 1, status: 1, order: 1 };
+
+    const products = await Product.find(query, projection)
       .populate("brand", "name slug image")
       .sort(sortObj)
       .skip(skip)

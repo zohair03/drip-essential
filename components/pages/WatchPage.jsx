@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProducts } from "../context/ProductContext";
+import { heroImageUrl } from "@/lib/cloudinaryUrl";
 
 function formatApiProduct(p) {
   if (!p) return null;
@@ -328,10 +329,14 @@ export default function WatchPage() {
             </div>
 
             <div className="flex-1 bg-[#F3F3F3] p-10 flex items-center justify-center min-h-[400px] lg:min-h-[600px] relative group overflow-hidden">
+              {/* LCP element: eager load, high fetch priority, Cloudinary-optimised at 900px wide */}
               <img
-                src={mainImage}
+                src={heroImageUrl(mainImage, 900)}
                 alt={product.name}
                 onError={handleImageError}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 className="w-[80%] h-auto object-contain mix-blend-multiply transition-transform duration-700 ease-out group-hover:scale-110"
               />
             </div>

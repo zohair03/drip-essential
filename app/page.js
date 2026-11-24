@@ -1,7 +1,20 @@
-import HeroSection from "@/components/sections/HeroSection"
-import BrandCategoriesSection from "@/components/sections/BrandCategoriesSection"
-import WatchShowcase from "@/components/sections/WatchShowcase"
-import AllTimeFavourites from "@/components/sections/AllTimeFavSection"
+import dynamic from "next/dynamic";
+import HeroSection from "@/components/sections/HeroSection";
+
+// Dynamically import below-fold sections — they are not needed on initial render,
+// so splitting them into separate JS chunks reduces TBT and speeds up FCP.
+const BrandCategoriesSection = dynamic(
+  () => import("@/components/sections/BrandCategoriesSection"),
+  { ssr: true }
+);
+const WatchShowcase = dynamic(
+  () => import("@/components/sections/WatchShowcase"),
+  { ssr: true }
+);
+const AllTimeFavourites = dynamic(
+  () => import("@/components/sections/AllTimeFavSection"),
+  { ssr: true }
+);
 
 export const metadata = {
   title: "Drip Essentials",
@@ -9,15 +22,14 @@ export const metadata = {
 };
 
 export default async function Home() {
-
-
   return (
     <>
+      {/* HeroSection is statically imported — it is the LCP element and must render immediately */}
       <HeroSection />
-      <BrandCategoriesSection/>
-      <WatchShowcase/>
-      <AllTimeFavourites/>
+      {/* Below-fold sections are code-split to reduce initial JS bundle */}
+      <BrandCategoriesSection />
+      <WatchShowcase />
+      <AllTimeFavourites />
     </>
-
   );
 }
