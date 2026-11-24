@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { thumbImageUrl } from "@/lib/cloudinaryUrl";
 import OrderSortControl from "@/components/admin/OrderSortControl";
 import {
   Watch,
@@ -363,8 +364,12 @@ export default function AdminProductsPage() {
                         <div className="h-12 w-12 shrink-0 rounded-lg border border-zinc-200 bg-zinc-50 overflow-hidden flex items-center justify-center p-1">
                           {p.image ? (
                             <img
-                              src={p.image}
+                              src={thumbImageUrl(p.image, 96)}
                               alt={p.name}
+                              loading="lazy"
+                              decoding="async"
+                              width={48}
+                              height={48}
                               className="h-full w-full object-contain mix-blend-multiply"
                             />
                           ) : (

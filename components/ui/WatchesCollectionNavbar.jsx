@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useProducts } from "../context/ProductContext";
-// import { getOptimizedStorageUrl } from "../lib/imageUtils";
+import { thumbImageUrl } from "@/lib/cloudinaryUrl";
 
 export function WatchesCollectionNavbar({ theme = "light" }) {
   const isDark = theme === "dark";
@@ -432,8 +432,12 @@ export function WatchesCollectionNavbar({ theme = "light" }) {
                           >
                             <div className="w-20 h-20 bg-white shrink-0 flex items-center justify-center p-2 rounded border border-gray-100 overflow-hidden">
                               <img
-                                src={product.image || "/images/image.png"}
+                                src={thumbImageUrl(product.image || "/images/image.png", 160)}
                                 alt={product.name}
+                                loading="lazy"
+                                decoding="async"
+                                width={80}
+                                height={80}
                                 className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform"
                               />
                             </div>

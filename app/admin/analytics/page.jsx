@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { thumbImageUrl } from "@/lib/cloudinaryUrl";
 import {
   MessageCircle,
   TrendingUp,
@@ -207,8 +208,12 @@ export default function AdminAnalyticsPage() {
                           <div className="h-9 w-9 shrink-0 rounded-md border border-zinc-200 bg-zinc-50 overflow-hidden flex items-center justify-center p-0.5">
                             {item.productImage ? (
                               <img
-                                src={item.productImage}
+                                src={thumbImageUrl(item.productImage, 72)}
                                 alt={item.productName}
+                                loading="lazy"
+                                decoding="async"
+                                width={36}
+                                height={36}
                                 className="h-full w-full object-contain mix-blend-multiply"
                               />
                             ) : (

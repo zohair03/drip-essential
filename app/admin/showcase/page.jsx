@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { thumbImageUrl } from "@/lib/cloudinaryUrl";
 import OrderSortControl from "@/components/admin/OrderSortControl";
 import {
   Sparkles,
@@ -428,14 +429,15 @@ export default function ShowcaseAdminPage() {
                       {/* Watch Image & Name */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative h-12 w-12 rounded-lg bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200/60 p-1">
-                            <Image
-                              src={p.image || "/images/image.png"}
+                          <div className="h-12 w-12 rounded-lg bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200/60 p-1 flex items-center justify-center">
+                            <img
+                              src={thumbImageUrl(p.image || "/images/image.png", 96)}
                               alt={p.name || "Watch"}
-                              fill
-                              sizes="48px"
-                              unoptimized
-                              className="object-contain"
+                              loading="lazy"
+                              decoding="async"
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-contain mix-blend-multiply"
                             />
                           </div>
                           <div>
@@ -599,14 +601,15 @@ export default function ShowcaseAdminPage() {
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="relative h-9 w-9 rounded bg-neutral-100 overflow-hidden flex-shrink-0 p-0.5">
-                              <Image
-                                src={p.image || "/images/image.png"}
+                            <div className="h-9 w-9 rounded bg-neutral-100 overflow-hidden flex-shrink-0 p-0.5 flex items-center justify-center">
+                              <img
+                                src={thumbImageUrl(p.image || "/images/image.png", 72)}
                                 alt={p.name}
-                                fill
-                                sizes="36px"
-                                unoptimized
-                                className="object-contain"
+                                loading="lazy"
+                                decoding="async"
+                                width={36}
+                                height={36}
+                                className="h-full w-full object-contain mix-blend-multiply"
                               />
                             </div>
                             <div>

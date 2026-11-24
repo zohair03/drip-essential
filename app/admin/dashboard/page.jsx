@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { thumbImageUrl } from "@/lib/cloudinaryUrl";
 import {
   Watch,
   Layers,
@@ -274,8 +275,12 @@ export default function AdminDashboardPage() {
                           <div className="h-10 w-10 shrink-0 rounded-lg border border-zinc-200 bg-zinc-50 overflow-hidden flex items-center justify-center p-1">
                             {p.image ? (
                               <img
-                                src={p.image}
+                                src={thumbImageUrl(p.image, 80)}
                                 alt={p.name}
+                                loading="lazy"
+                                decoding="async"
+                                width={40}
+                                height={40}
                                 className="h-full w-full object-contain mix-blend-multiply"
                               />
                             ) : (

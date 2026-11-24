@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProducts } from "../context/ProductContext";
-import { heroImageUrl } from "@/lib/cloudinaryUrl";
+import { heroImageUrl, cardImageUrl, thumbImageUrl } from "@/lib/cloudinaryUrl";
 
 function formatApiProduct(p) {
   if (!p) return null;
@@ -518,9 +518,13 @@ export default function WatchPage() {
                   </button>
 
                   <img
-                    src={similar.image}
+                    src={cardImageUrl(similar.image, 400)}
                     alt={similar.brand}
                     onError={handleImageError}
+                    loading="lazy"
+                    decoding="async"
+                    width={400}
+                    height={400}
                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 mix-blend-multiply"
                   />
                 </div>

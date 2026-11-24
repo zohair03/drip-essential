@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { thumbImageUrl } from "@/lib/cloudinaryUrl";
 import OrderSortControl from "@/components/admin/OrderSortControl";
 import {
   Layers,
@@ -234,8 +235,12 @@ export default function AdminBrandsPage() {
                       <div className="h-10 w-16 rounded-md border border-zinc-200 bg-zinc-50 flex items-center justify-center p-1 overflow-hidden">
                         {b.image ? (
                           <img
-                            src={b.image}
+                            src={thumbImageUrl(b.image, 128)}
                             alt={b.name}
+                            loading="lazy"
+                            decoding="async"
+                            width={64}
+                            height={40}
                             className="h-full w-full object-contain mix-blend-multiply"
                           />
                         ) : (
