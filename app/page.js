@@ -17,8 +17,8 @@ const AllTimeFavourites = dynamic(
 );
 
 export const metadata = {
-  title: "Drip Essentials",
-  description: "Drip Essentials is your one-stop destination for luxury watches. Shop the latest collections from top brands and find your perfect timepiece today!",
+  title: "Drip Essential",
+  description: "Drip Essential is your one-stop destination for luxury watches. Shop the latest collections from top brands and find your perfect timepiece today!",
 };
 
 export default async function Home() {
