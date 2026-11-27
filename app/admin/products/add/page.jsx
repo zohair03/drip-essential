@@ -12,6 +12,32 @@ import {
 } from "lucide-react";
 import R2ImageUploader from "@/components/admin/R2ImageUploader";
 
+const INITIAL_FORM_DATA = {
+  name: "",
+  brand: "",
+  description: "",
+  price: "",
+  stock: "1",
+  status: "Active",
+  image: "",
+  imagePublicId: "",
+  images: [],
+  imagePublicIds: [],
+  // R2 fields
+  r2Image: null,
+  r2ImageStandard: null,
+  r2ImageFull: null,
+  r2Key: null,
+  r2KeyStandard: null,
+  r2KeyFull: null,
+  r2Images: [],
+  r2ImagesStandard: [],
+  r2ImagesFull: [],
+  r2Keys: [],
+  r2KeysStandard: [],
+  r2KeysFull: [],
+};
+
 export default function AddProductPage() {
   const router = useRouter();
 
@@ -22,31 +48,15 @@ export default function AddProductPage() {
   const [success, setSuccess] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState({
-    name: "",
-    brand: "",
-    description: "",
-    price: "",
-    stock: "1",
-    status: "Active",
-    image: "",
-    imagePublicId: "",
-    images: [],
-    imagePublicIds: [],
-    // R2 fields
-    r2Image: null,
-    r2ImageStandard: null,
-    r2ImageFull: null,
-    r2Key: null,
-    r2KeyStandard: null,
-    r2KeyFull: null,
-    r2Images: [],
-    r2ImagesStandard: [],
-    r2ImagesFull: [],
-    r2Keys: [],
-    r2KeysStandard: [],
-    r2KeysFull: [],
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+  // Reset status flags on cleanup
+  useEffect(() => {
+    return () => {
+      setSuccess(false);
+      setError("");
+    };
+  }, []);
 
   // Load brands
   useEffect(() => {
@@ -56,7 +66,10 @@ export default function AddProductPage() {
         if (data.success) {
           setBrands(data.brands || []);
           if (data.brands?.length > 0) {
-            setFormData((prev) => ({ ...prev, brand: data.brands[0].id }));
+            setFormData((prev) => ({
+              ...prev,
+              brand: prev.brand || data.brands[0].id,
+            }));
           }
         }
       })
@@ -119,7 +132,14 @@ export default function AddProductPage() {
         throw new Error(data.error || "Failed to create product.");
       }
 
+      // Reset form fields immediately so re-entering the add route is fresh
+      setFormData({
+        ...INITIAL_FORM_DATA,
+        brand: brands.length > 0 ? brands[0].id : "",
+      });
       setSuccess(true);
+      setSaving(false);
+
       setTimeout(() => {
         router.push("/admin/products");
         router.refresh();

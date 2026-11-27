@@ -13,9 +13,10 @@ export async function GET(request) {
     const includeInactive = searchParams.get("all") === "true";
 
     const admin = await getAuthenticatedAdmin(request);
+    const isAdminReq = !!(admin || includeInactive || searchParams.get("admin") === "true");
     const filter = { type: "bestseller" };
 
-    if (!includeInactive || !admin) {
+    if (!isAdminReq) {
       filter.status = "Active";
     }
 
@@ -30,7 +31,7 @@ export async function GET(request) {
     // Filter out items whose product was deleted or is Draft for public users
     const validItems = items.filter((item) => {
       if (!item.product) return false;
-      if (!admin && item.product.status === "Draft") return false;
+      if (!isAdminReq && item.product.status === "Draft") return false;
       return true;
     });
 
@@ -67,11 +68,22 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      items: serialized,
-      count: serialized.length,
-    });
+    const cacheHeader = isAdminReq
+      ? "no-store, no-cache, must-revalidate, max-age=0"
+      : "public, s-maxage=300, stale-while-revalidate=600";
+
+    return NextResponse.json(
+      {
+        success: true,
+        items: serialized,
+        count: serialized.length,
+      },
+      {
+        headers: {
+          "Cache-Control": cacheHeader,
+        },
+      }
+    );
   } catch (error) {
     console.error("Bestsellers GET error:", error);
     return NextResponse.json(

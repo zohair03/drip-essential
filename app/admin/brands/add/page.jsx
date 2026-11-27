@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import CloudinaryImageUploader from "@/components/admin/CloudinaryImageUploader";
+
+const INITIAL_BRAND_FORM = {
+  name: "",
+  description: "",
+  status: "Active",
+  image: "",
+  imagePublicId: "",
+};
 
 export default function AddBrandPage() {
   const router = useRouter();
@@ -13,13 +21,15 @@ export default function AddBrandPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    status: "Active",
-    image: "",
-    imagePublicId: "",
-  });
+  const [formData, setFormData] = useState(INITIAL_BRAND_FORM);
+
+  // Reset status flags on cleanup
+  useEffect(() => {
+    return () => {
+      setSuccess(false);
+      setError("");
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,7 +45,7 @@ export default function AddBrandPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError("");
 
     if (!formData.name.trim()) {
@@ -57,7 +67,11 @@ export default function AddBrandPage() {
         throw new Error(data.error || "Failed to create brand.");
       }
 
+      // Reset form fields immediately so re-entering the add route is fresh
+      setFormData(INITIAL_BRAND_FORM);
       setSuccess(true);
+      setSaving(false);
+
       setTimeout(() => {
         router.push("/admin/brands");
         router.refresh();

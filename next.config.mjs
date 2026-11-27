@@ -21,39 +21,6 @@ const nextConfig = {
     // Cache optimised images on Vercel CDN for up to 7 days
     minimumCacheTTL: 60 * 60 * 24 * 7,
   },
-  // Add Cache-Control headers for static assets and API responses
-  async headers() {
-    return [
-      {
-        // Cache brand logos and product images served via /api for 10 minutes on CDN
-        source: "/api/brands",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, s-maxage=600, stale-while-revalidate=1200",
-          },
-        ],
-      },
-      {
-        source: "/api/bestsellers",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, s-maxage=300, stale-while-revalidate=600",
-          },
-        ],
-      },
-      {
-        source: "/api/showcase",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, s-maxage=300, stale-while-revalidate=600",
-          },
-        ],
-      },
-    ];
-  },
   experimental: {
     agentFeedback: true,
   },

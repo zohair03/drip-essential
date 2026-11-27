@@ -25,7 +25,7 @@ export default function AdminBrandsPage() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/brands?all=true", { cache: "no-store" })
+    fetch(`/api/brands?all=true&admin=true&t=${Date.now()}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (active && data.success) {
@@ -45,7 +45,7 @@ export default function AdminBrandsPage() {
   const fetchBrands = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/brands?all=true", { cache: "no-store" });
+      const res = await fetch(`/api/brands?all=true&admin=true&t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setBrands(data.brands || []);
@@ -210,7 +210,7 @@ export default function AdminBrandsPage() {
                   <th className="py-3.5 px-4">Brand Logo</th>
                   <th className="py-3.5 px-4">Brand Name</th>
                   {/* <th className="py-3.5 px-4">Slug</th> */}
-                  <th className="py-3.5 px-4">Associated Watches</th>
+                  {/* <th className="py-3.5 px-4">Associated Watches</th> */}
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
@@ -269,11 +269,11 @@ export default function AdminBrandsPage() {
                     </td> */}
 
                     {/* Product Count */}
-                    <td className="py-3 px-4">
+                    {/* <td className="py-3 px-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold text-zinc-700 bg-zinc-100">
                         {b.productCount || 0} watches
                       </span>
-                    </td>
+                    </td> */}
 
                     {/* Status */}
                     <td className="py-3 px-4">

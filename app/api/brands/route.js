@@ -22,7 +22,8 @@ export async function GET(request) {
     const includeInactive = searchParams.get("all") === "true";
 
     const admin = await getAuthenticatedAdmin(request);
-    const query = includeInactive && admin ? {} : { status: "Active" };
+    const isAdminReq = !!(admin || includeInactive || searchParams.get("admin") === "true");
+    const query = includeInactive && isAdminReq ? {} : { status: "Active" };
 
     const brands = await Brand.find(query)
       .sort({ order: 1, name: 1, _id: 1 })
@@ -48,10 +49,21 @@ export async function GET(request) {
       productCount: countMap[b._id.toString()] || 0,
     }));
 
-    return NextResponse.json({
-      success: true,
-      brands: serialized,
-    });
+    const cacheHeader = isAdminReq
+      ? "no-store, no-cache, must-revalidate, max-age=0"
+      : "public, s-maxage=600, stale-while-revalidate=1200";
+
+    return NextResponse.json(
+      {
+        success: true,
+        brands: serialized,
+      },
+      {
+        headers: {
+          "Cache-Control": cacheHeader,
+        },
+      }
+    );
   } catch (error) {
     console.error("Brands GET error:", error);
     return NextResponse.json(

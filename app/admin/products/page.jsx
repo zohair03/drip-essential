@@ -48,6 +48,7 @@ export default function AdminProductsPage() {
     params.set("admin", "true");
     params.set("limit", "1000");
     params.set("all", "true");
+    params.set("t", Date.now().toString());
     if (search.trim()) params.set("search", search.trim());
     if (selectedBrand !== "all") params.set("brand", selectedBrand);
     if (selectedStatus !== "all") params.set("status", selectedStatus);
@@ -84,6 +85,7 @@ export default function AdminProductsPage() {
       params.set("admin", "true");
       params.set("limit", "1000");
       params.set("all", "true");
+      params.set("t", Date.now().toString());
       if (search.trim()) params.set("search", search.trim());
       if (selectedBrand !== "all") params.set("brand", selectedBrand);
       if (selectedStatus !== "all") params.set("status", selectedStatus);

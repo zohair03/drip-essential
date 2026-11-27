@@ -355,8 +355,13 @@ export async function POST(request) {
 
     let finalOrder = parsed.data.order;
     if (finalOrder === undefined || finalOrder === null) {
-      const highest = await Product.findOne({}).sort({ order: -1 }).select("order");
-      finalOrder = (highest?.order || 0) + 1;
+      // Every newly added watch takes the 1st position (order: 1).
+      // Increment existing products' order by 1 so the previous #1 takes spot #2, #2 takes spot #3, etc.
+      await Product.updateMany({}, { $inc: { order: 1 } });
+      finalOrder = 1;
+    } else {
+      // If a specific position is explicitly requested, shift everything at or after that order
+      await Product.updateMany({ order: { $gte: finalOrder } }, { $inc: { order: 1 } });
     }
 
     const product = await Product.create({

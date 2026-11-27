@@ -42,7 +42,7 @@ export default function BestSellersAdminPage() {
   const fetchBestsellerItems = useCallback(async () => {
     try {
       setError("");
-      const res = await fetch("/api/bestsellers?all=true", { cache: "no-store" });
+      const res = await fetch(`/api/bestsellers?all=true&admin=true&t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setItems(data.items || []);
@@ -60,7 +60,7 @@ export default function BestSellersAdminPage() {
   // Fetch all products for selection modal
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await fetch("/api/products?limit=200&admin=true", {
+      const res = await fetch("/api/products?limit=1000&admin=true", {
         cache: "no-store",
       });
       const data = await res.json();
