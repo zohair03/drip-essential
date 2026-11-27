@@ -31,9 +31,10 @@ export function ResponsiveImage({
   ...props
 }) {
   const isCloudinary = src && typeof src === "string" && src.includes("res.cloudinary.com");
+  const isR2 = src && typeof src === "string" && (src.includes("images.dripessential.in") || src.includes(".r2."));
   const displayWidth = width > 0 ? width : 400;
 
-  const optimizedSrc = isCloudinary
+  const optimizedSrc = isCloudinary || isR2
     ? cardImageUrl(src, displayWidth)
     : src || "/images/image.png";
 

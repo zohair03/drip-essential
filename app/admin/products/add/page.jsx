@@ -10,7 +10,7 @@ import {
   AlertCircle,
   Plus,
 } from "lucide-react";
-import CloudinaryImageUploader from "@/components/admin/CloudinaryImageUploader";
+import R2ImageUploader from "@/components/admin/R2ImageUploader";
 
 export default function AddProductPage() {
   const router = useRouter();
@@ -33,6 +33,19 @@ export default function AddProductPage() {
     imagePublicId: "",
     images: [],
     imagePublicIds: [],
+    // R2 fields
+    r2Image: null,
+    r2ImageStandard: null,
+    r2ImageFull: null,
+    r2Key: null,
+    r2KeyStandard: null,
+    r2KeyFull: null,
+    r2Images: [],
+    r2ImagesStandard: [],
+    r2ImagesFull: [],
+    r2Keys: [],
+    r2KeysStandard: [],
+    r2KeysFull: [],
   });
 
   // Load brands
@@ -309,23 +322,22 @@ export default function AddProductPage() {
           </div>
         </div>
 
-        {/* SECTION C: Cloudinary Images */}
+        {/* SECTION C: R2 Images */}
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs space-y-4">
           <div className="pb-2 border-b border-zinc-100 flex items-center justify-between">
             <h3 className="text-xs font-bold tracking-wider uppercase text-zinc-950">
-              3. Cloudinary Imagery
+              3. Product Images
             </h3>
             <span className="text-[11px] text-zinc-400">
-              Folder: drip-essential/products
+              Stored on Cloudflare R2 · Auto-optimized WebP
             </span>
           </div>
 
-          <CloudinaryImageUploader
+          <R2ImageUploader
             images={formData.images}
             imagePublicIds={formData.imagePublicIds}
             mainImage={formData.image}
             onChange={handleImageChange}
-            folder="drip-essential/products"
           />
         </div>
 

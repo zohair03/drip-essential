@@ -6,6 +6,7 @@ import Product from "@/lib/models/Product";
 import Brand from "@/lib/models/Brand";
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { deleteCloudinaryImages } from "@/lib/cloudinary";
+import { deleteMultipleFromR2 } from "@/lib/r2";
 
 const productUpdateSchema = z.object({
   name: z.string().min(1, "Product name is required").trim().optional(),
@@ -19,6 +20,19 @@ const productUpdateSchema = z.object({
   imagePublicIds: z.array(z.string()).optional(),
   status: z.enum(["Active", "Draft"]).optional(),
   order: z.coerce.number().int().optional(),
+  // R2 fields
+  r2Image: z.string().nullable().optional(),
+  r2ImageStandard: z.string().nullable().optional(),
+  r2ImageFull: z.string().nullable().optional(),
+  r2Key: z.string().nullable().optional(),
+  r2KeyStandard: z.string().nullable().optional(),
+  r2KeyFull: z.string().nullable().optional(),
+  r2Images: z.array(z.string()).optional(),
+  r2ImagesStandard: z.array(z.string()).optional(),
+  r2ImagesFull: z.array(z.string()).optional(),
+  r2Keys: z.array(z.string()).optional(),
+  r2KeysStandard: z.array(z.string()).optional(),
+  r2KeysFull: z.array(z.string()).optional(),
 });
 
 export async function GET(request, { params }) {
@@ -238,8 +252,23 @@ export async function DELETE(request, { params }) {
     if (product.imagePublicId) allPublicIds.add(product.imagePublicId);
     const idArray = Array.from(allPublicIds).filter(Boolean);
 
+    // Gather all R2 keys from this product
+    const r2KeysToDelete = [
+      product.r2Key,
+      product.r2KeyStandard,
+      product.r2KeyFull,
+      ...(product.r2Keys || []),
+      ...(product.r2KeysStandard || []),
+      ...(product.r2KeysFull || []),
+    ].filter(Boolean);
+
     // Delete product from database
     await Product.findByIdAndDelete(id);
+
+    // Clean up R2 objects
+    if (r2KeysToDelete.length > 0) {
+      await deleteMultipleFromR2(r2KeysToDelete);
+    }
 
     // Check if images are referenced by other products before deleting from Cloudinary
     if (idArray.length > 0) {

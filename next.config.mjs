@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: "res.cloudinary.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.dripessential.in",
+        pathname: "/**",
+      },
     ],
     // Serve modern formats — browsers that support AVIF get ~50% smaller files
     formats: ["image/avif", "image/webp"],

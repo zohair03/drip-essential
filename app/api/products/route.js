@@ -18,6 +18,19 @@ const productCreateSchema = z.object({
   imagePublicIds: z.array(z.string()).optional().default([]),
   status: z.enum(["Active", "Draft"]).optional().default("Active"),
   order: z.coerce.number().int().optional(),
+  // R2 fields (optional — present for new uploads, absent for existing Cloudinary products)
+  r2Image: z.string().nullable().optional(),
+  r2ImageStandard: z.string().nullable().optional(),
+  r2ImageFull: z.string().nullable().optional(),
+  r2Key: z.string().nullable().optional(),
+  r2KeyStandard: z.string().nullable().optional(),
+  r2KeyFull: z.string().nullable().optional(),
+  r2Images: z.array(z.string()).optional().default([]),
+  r2ImagesStandard: z.array(z.string()).optional().default([]),
+  r2ImagesFull: z.array(z.string()).optional().default([]),
+  r2Keys: z.array(z.string()).optional().default([]),
+  r2KeysStandard: z.array(z.string()).optional().default([]),
+  r2KeysFull: z.array(z.string()).optional().default([]),
 });
 
 export async function GET(request) {
@@ -232,7 +245,8 @@ export async function GET(request) {
     // This significantly reduces the MongoDB → Next.js → browser payload.
     const projection = isAdminReq
       ? {}
-      : { name: 1, brand: 1, price: 1, stock: 1, image: 1, images: 1, status: 1, order: 1 };
+      : { name: 1, brand: 1, price: 1, stock: 1, image: 1, images: 1, status: 1, order: 1,
+          r2Image: 1, r2ImageStandard: 1, r2Images: 1, r2ImagesStandard: 1 };
 
     const products = await Product.find(query, projection)
       .populate("brand", "name slug image")
@@ -353,6 +367,19 @@ export async function POST(request) {
       images: imagesList,
       imagePublicIds: publicIdsList,
       order: finalOrder,
+      // R2 fields (null-safe — only set if provided)
+      ...(parsed.data.r2Image != null && { r2Image: parsed.data.r2Image }),
+      ...(parsed.data.r2ImageStandard != null && { r2ImageStandard: parsed.data.r2ImageStandard }),
+      ...(parsed.data.r2ImageFull != null && { r2ImageFull: parsed.data.r2ImageFull }),
+      ...(parsed.data.r2Key != null && { r2Key: parsed.data.r2Key }),
+      ...(parsed.data.r2KeyStandard != null && { r2KeyStandard: parsed.data.r2KeyStandard }),
+      ...(parsed.data.r2KeyFull != null && { r2KeyFull: parsed.data.r2KeyFull }),
+      ...(parsed.data.r2Images?.length && { r2Images: parsed.data.r2Images }),
+      ...(parsed.data.r2ImagesStandard?.length && { r2ImagesStandard: parsed.data.r2ImagesStandard }),
+      ...(parsed.data.r2ImagesFull?.length && { r2ImagesFull: parsed.data.r2ImagesFull }),
+      ...(parsed.data.r2Keys?.length && { r2Keys: parsed.data.r2Keys }),
+      ...(parsed.data.r2KeysStandard?.length && { r2KeysStandard: parsed.data.r2KeysStandard }),
+      ...(parsed.data.r2KeysFull?.length && { r2KeysFull: parsed.data.r2KeysFull }),
     });
 
     const populated = await Product.findById(product._id)

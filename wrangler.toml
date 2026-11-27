@@ -1,0 +1,13 @@
+name = "drip-essentials-image-worker"
+main = "workers/image-worker.js"
+compatibility_date = "2024-01-01"
+
+# Bind your R2 bucket here:
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "drip-essential-products"
+
+# If routing traffic via Worker on your custom domain:
+# routes = [
+#   { pattern = "images.dripessential.in/*", zone_name = "dripessential.in" }
+# ]
