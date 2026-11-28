@@ -225,18 +225,6 @@ export async function GET(request) {
     // return documents in different orders on each request when the primary
     // sort field (price, createdAt) has many ties, causing duplicate watch
     // cards across pages.
-    let sortObj;
-    if (sortParam === "price-low" || sortParam === "price-asc") {
-      sortObj = { price: 1, _id: 1 };
-    } else if (sortParam === "price-high" || sortParam === "price-desc") {
-      sortObj = { price: -1, _id: -1 };
-    } else if (sortParam === "newest") {
-      sortObj = { _id: -1 };
-    } else if (sortParam === "order" || sortParam === "featured" || !sortParam) {
-      sortObj = { order: 1, _id: 1 };
-    } else {
-      sortObj = { order: 1, _id: 1 };
-    }
 
     const total = await Product.countDocuments(query);
     const skip = (page - 1) * limit;
@@ -248,36 +236,151 @@ export async function GET(request) {
       : { name: 1, brand: 1, price: 1, stock: 1, image: 1, images: 1, status: 1, order: 1,
           r2Image: 1, r2ImageStandard: 1, r2Images: 1, r2ImagesStandard: 1 };
 
-    const products = await Product.find(query, projection)
-      .populate("brand", "name slug image")
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    // ─── MODEL-GROUPED SORT ──────────────────────────────────────────────────
+    // When a brand filter is active on the public storefront and sort=featured,
+    // use an aggregation pipeline to extract a normalised "modelKey" from the
+    // product name and sort by it.  This keeps every model family (e.g. all
+    // PRX variants, all PRC 200 variants) together across pages regardless of
+    // how the full names differ in length or casing.
+    //
+    // modelKey derivation (via MongoDB $toLower + $split + $slice + $concat):
+    //   "Tissot PRX Powermatic 80" → lowercase → ["tissot","prx","powermatic","80"]
+    //   → take first 3 words → "tissot prx powermatic"
+    //   "Tissot PRC 200 Chronograph" → "tissot prc 200"
+    //   This is enough to cluster all PRX variants before PRC variants, etc.
+    //
+    // Within the same modelKey, products are sorted by their full lowercase
+    // name so variants appear in a consistent order (Chronograph, Powermatic,
+    // Quartz …).  _id is the final tiebreaker for a stable cursor across pages.
+    // ─────────────────────────────────────────────────────────────────────────
 
-    const serialized = products.map((p) => {
-      const brandObj = p.brand;
-      const brandName = typeof brandObj === "object" && brandObj !== null
-        ? brandObj.name
-        : "UNKNOWN";
+    const useModelGrouping =
+      (sortParam === "order" || sortParam === "featured" || !sortParam) &&
+      brandParam &&
+      !isAdminReq;
 
-      return {
-        ...p,
-        id: p._id.toString(),
-        _id: undefined,
-        __v: undefined,
-        order: p.order ?? 0,
-        brand: brandName,
-        brandId: typeof brandObj === "object" && brandObj !== null
-          ? brandObj._id?.toString()
-          : String(p.brand),
-        brandData: typeof brandObj === "object" ? brandObj : null,
+    let products;
+
+    if (useModelGrouping) {
+
+      // $split the lowercased name into words, take first 3 tokens, join with space → modelKey
+      const addFieldsStage = {
+        $addFields: {
+          _modelKey: {
+            $reduce: {
+              input: {
+                $slice: [
+                  { $split: [{ $toLower: "$name" }, " "] },
+                  3,
+                ],
+              },
+              initialValue: "",
+              in: {
+                $cond: [
+                  { $eq: ["$$value", ""] },
+                  "$$this",
+                  { $concat: ["$$value", " ", "$$this"] },
+                ],
+              },
+            },
+          },
+          _nameLower: { $toLower: "$name" },
+        },
       };
-    });
+
+      const pipeline = [
+        { $match: query },
+        addFieldsStage,
+        {
+          $sort: {
+            _modelKey: 1,   // group by model family
+            _nameLower: 1,  // within the family, sort by full name
+            _id: 1,         // stable cursor
+          },
+        },
+        { $skip: skip },
+        { $limit: limit },
+      ];
+
+      // Remove the computed helper fields; keep all real document fields.
+      // We use a pure-exclusion $project so we don't have to list every field.
+      pipeline.push({ $project: { _modelKey: 0, _nameLower: 0 } });
+
+      // Run aggregation then populate brand manually
+      const rawDocs = await Product.aggregate(pipeline).collation({ locale: "en", strength: 2 });
+
+      // Populate brand field
+      const brandIds = [...new Set(rawDocs.map((d) => d.brand?.toString()).filter(Boolean))];
+      const brandDocs = await Brand.find({
+        _id: { $in: brandIds.map((id) => {
+          try { return new mongoose.Types.ObjectId(id); } catch { return null; }
+        }).filter(Boolean) },
+      }).select("name slug image").lean();
+      const brandMap = {};
+      brandDocs.forEach((b) => { brandMap[b._id.toString()] = b; });
+
+      products = rawDocs.map((p) => {
+        const brandId = p.brand?.toString();
+        const brandObj = brandMap[brandId] || null;
+        return {
+          ...p,
+          id: p._id.toString(),
+          _id: undefined,
+          __v: undefined,
+          order: p.order ?? 0,
+          brand: brandObj?.name ?? "UNKNOWN",
+          brandId: brandId ?? "",
+          brandData: brandObj,
+        };
+      });
+    } else {
+      // Standard sort path (no model grouping needed)
+      let sortObj;
+      let useCollation = false;
+      if (sortParam === "price-low" || sortParam === "price-asc") {
+        sortObj = { price: 1, _id: 1 };
+      } else if (sortParam === "price-high" || sortParam === "price-desc") {
+        sortObj = { price: -1, _id: -1 };
+      } else if (sortParam === "newest") {
+        sortObj = { _id: -1 };
+      } else {
+        sortObj = { order: 1, _id: 1 };
+      }
+
+      let findQuery = Product.find(query, projection)
+        .populate("brand", "name slug image")
+        .sort(sortObj);
+
+      if (useCollation) {
+        findQuery = findQuery.collation({ locale: "en", strength: 2 });
+      }
+
+      const rawProducts = await findQuery.skip(skip).limit(limit).lean();
+
+      products = rawProducts.map((p) => {
+        const brandObj = p.brand;
+        const brandName = typeof brandObj === "object" && brandObj !== null
+          ? brandObj.name
+          : "UNKNOWN";
+
+        return {
+          ...p,
+          id: p._id.toString(),
+          _id: undefined,
+          __v: undefined,
+          order: p.order ?? 0,
+          brand: brandName,
+          brandId: typeof brandObj === "object" && brandObj !== null
+            ? brandObj._id?.toString()
+            : String(p.brand),
+          brandData: typeof brandObj === "object" ? brandObj : null,
+        };
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      products: serialized,
+      products,
       total,
       page,
       pages: Math.ceil(total / limit),
@@ -470,7 +573,39 @@ export async function PUT(request) {
       );
     }
 
-    if (order !== undefined) product.order = Number(order);
+    if (order !== undefined) {
+      const parsedOrder = parseInt(order, 10);
+      if (!isNaN(parsedOrder)) {
+        const totalProducts = await Product.countDocuments();
+        const targetOrder = Math.max(1, Math.min(totalProducts, parsedOrder));
+        const currentOrder = product.order ?? 1;
+
+        if (currentOrder !== targetOrder) {
+          if (targetOrder < currentOrder) {
+            // Moving up in priority (e.g. from 134 to 1)
+            // Shift all products in [targetOrder, currentOrder - 1] down by +1
+            await Product.updateMany(
+              {
+                order: { $gte: targetOrder, $lt: currentOrder },
+                _id: { $ne: product._id },
+              },
+              { $inc: { order: 1 } }
+            );
+          } else {
+            // Moving down in priority (e.g. from 1 to 50)
+            // Shift all products in [currentOrder + 1, targetOrder] up by -1
+            await Product.updateMany(
+              {
+                order: { $gt: currentOrder, $lte: targetOrder },
+                _id: { $ne: product._id },
+              },
+              { $inc: { order: -1 } }
+            );
+          }
+          product.order = targetOrder;
+        }
+      }
+    }
     if (status !== undefined) product.status = status;
 
     await product.save();

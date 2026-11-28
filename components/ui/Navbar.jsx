@@ -114,7 +114,7 @@ export default function Navbar({ theme = "light" }) {
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(
-          `/api/products?search=${encodeURIComponent(trimmed)}&limit=6`,
+          `/api/products?search=${encodeURIComponent(trimmed)}&limit=30`,
           { cache: "no-store" }
         );
         const data = await res.json();
@@ -407,9 +407,9 @@ export default function Navbar({ theme = "light" }) {
                   {/* Suggestions List */}
                   {!isSearching && searchSuggestions.length > 0 && (
                     <div className="mt-12 flex flex-col gap-2 font-sans text-left">
-                      <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-4">
+                      {/* <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-4">
                         Matching Timepieces ({searchSuggestions.length})
-                      </p>
+                      </p> */}
 
                       {searchSuggestions.map((product) => {
                         const formattedPrice =

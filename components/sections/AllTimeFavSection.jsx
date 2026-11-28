@@ -20,7 +20,7 @@ export default function AllTimeFavourites() {
       <div className="max-w-[1400px] mx-auto px-4 md:px-6">
         <div className="flex items-center justify-center mb-6 md:mb-12 border-b border-black/5 pb-2 md:pb-4">
           <h2
-            className="uppercase tracking-widest text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-center"
+            className="uppercase tracking-widest text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-center text-black"
             style={{ fontFamily: "Bebas Neue, sans-serif" }}
           >
             Bestsellers

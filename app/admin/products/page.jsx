@@ -112,39 +112,86 @@ export default function AdminProductsPage() {
   };
 
   const handleMoveItem = async (index, direction) => {
+    if (search.trim()) return;
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= products.length) return;
 
-    const newProducts = [...products];
-    const [movedProduct] = newProducts.splice(index, 1);
-    newProducts.splice(targetIndex, 0, movedProduct);
+    const currentItem = products[index];
+    const targetItem = products[targetIndex];
+    if (!currentItem || !targetItem) return;
 
-    // Normalize sequential orders 1..N
-    const resequenced = newProducts.map((p, idx) => ({
-      ...p,
-      order: idx + 1,
-    }));
+    const isUnfiltered =
+      selectedBrand === "all" &&
+      selectedStatus === "all" &&
+      selectedStock === "all";
 
-    // Optimistic UI update
-    setProducts(resequenced);
+    if (isUnfiltered) {
+      const newProducts = [...products];
+      const [movedProduct] = newProducts.splice(index, 1);
+      newProducts.splice(targetIndex, 0, movedProduct);
 
-    try {
-      const res = await fetch("/api/products", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: resequenced.map((p) => ({ id: p.id, order: p.order })),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to update product orders");
+      // Normalize sequential orders 1..N
+      const resequenced = newProducts.map((p, idx) => ({
+        ...p,
+        order: idx + 1,
+      }));
+
+      // Optimistic UI update
+      setProducts(resequenced);
+
+      try {
+        const res = await fetch("/api/products", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: resequenced.map((p) => ({ id: p.id, order: p.order })),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to update product orders");
+        }
+        setSuccessMsg("Product order updated successfully");
+        setTimeout(() => setSuccessMsg(""), 3000);
+      } catch (err) {
+        console.error("Product order move error:", err);
+        fetchProducts();
       }
-      setSuccessMsg("Product order updated successfully");
-      setTimeout(() => setSuccessMsg(""), 3000);
-    } catch (err) {
-      console.error("Product order move error:", err);
-      fetchProducts();
+    } else {
+      // In a filtered view (e.g. by brand), swap orders of the two items
+      const currentOrder = currentItem.order;
+      const targetOrder = targetItem.order;
+
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === currentItem.id) return { ...p, order: targetOrder };
+          if (p.id === targetItem.id) return { ...p, order: currentOrder };
+          return p;
+        })
+      );
+
+      try {
+        const res = await fetch("/api/products", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: [
+              { id: currentItem.id, order: targetOrder },
+              { id: targetItem.id, order: currentOrder },
+            ],
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to update product orders");
+        }
+        setSuccessMsg("Product order updated successfully");
+        setTimeout(() => setSuccessMsg(""), 3000);
+        fetchProducts();
+      } catch (err) {
+        console.error("Product order move error:", err);
+        fetchProducts();
+      }
     }
   };
 
@@ -152,39 +199,27 @@ export default function AdminProductsPage() {
     const orderNum = parseInt(newOrder, 10);
     if (isNaN(orderNum) || orderNum === product.order || orderNum < 1) return;
 
-    const currentIndex = products.findIndex((p) => p.id === product.id);
-    if (currentIndex === -1) return;
-
-    const targetIndex = Math.max(0, Math.min(products.length - 1, orderNum - 1));
-    if (currentIndex === targetIndex) return;
-
-    const newProducts = [...products];
-    const [movedProduct] = newProducts.splice(currentIndex, 1);
-    newProducts.splice(targetIndex, 0, movedProduct);
-
-    // Normalize sequential orders 1..N
-    const resequenced = newProducts.map((p, idx) => ({
-      ...p,
-      order: idx + 1,
-    }));
-
-    // Optimistic UI update
-    setProducts(resequenced);
+    // Optimistically update the product's order in current view
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, order: orderNum } : p))
+    );
 
     try {
       const res = await fetch("/api/products", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: resequenced.map((p) => ({ id: p.id, order: p.order })),
+          id: product.id,
+          order: orderNum,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to update product orders");
+        throw new Error(data.error || "Failed to update product order");
       }
       setSuccessMsg("Product order updated successfully");
       setTimeout(() => setSuccessMsg(""), 3000);
+      fetchProducts();
     } catch (err) {
       console.error("Product order change error:", err);
       fetchProducts();
@@ -354,6 +389,7 @@ export default function AdminProductsPage() {
                         order={p.order ?? index + 1}
                         index={index}
                         totalItems={products.length}
+                        hideArrows={Boolean(search.trim())}
                         onMoveUp={() => handleMoveItem(index, "up")}
                         onMoveDown={() => handleMoveItem(index, "down")}
                         onOrderChange={(newOrder) => handleOrderChange(p, newOrder)}

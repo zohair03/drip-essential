@@ -292,7 +292,7 @@ export default function AdminBrandsPage() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Link
-                          href={`/watches/${b.name.toLowerCase()}`}
+                          href={`/watches/?brand=${b.name.toLowerCase()}`}
                           target="_blank"
                           title="View on storefront"
                           className="rounded p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 transition"

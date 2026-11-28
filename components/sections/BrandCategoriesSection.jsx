@@ -29,7 +29,7 @@ export function BrandCategoriesSection() {
     <section className="py-20 bg-white">
       <div className="max-w-[1600px] mx-auto px-6">
         <h2
-          className="text-center uppercase tracking-widest mb-12"
+          className="text-center uppercase tracking-widest mb-12 text-black"
           style={{
             fontFamily: "Bebas Neue, sans-serif",
             fontSize: "clamp(3rem, 8vw, 5rem)",

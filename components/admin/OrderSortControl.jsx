@@ -19,6 +19,7 @@ export default function OrderSortControl({
   onMoveUp,
   onMoveDown,
   onOrderChange,
+  hideArrows = false,
   disabled = false,
   className = "",
 }) {
@@ -58,12 +59,12 @@ export default function OrderSortControl({
       e.target.blur();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (!isFirst && onMoveUp) {
+      if (!isFirst && onMoveUp && !hideArrows) {
         onMoveUp();
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (!isLast && onMoveDown) {
+      if (!isLast && onMoveDown && !hideArrows) {
         onMoveDown();
       }
     }
@@ -86,41 +87,43 @@ export default function OrderSortControl({
       />
 
       {/* Up / Down Arrow Stepper */}
-      <div className="flex flex-col border border-neutral-200 rounded overflow-hidden bg-neutral-100 shadow-2xs divide-y divide-neutral-200">
-        <button
-          type="button"
-          onClick={onMoveUp}
-          disabled={disabled || isFirst}
-          title={isFirst ? "Already at top" : "Move watch up (higher priority)"}
-          aria-label="Move watch up"
-          className="px-1.5 py-0.5 hover:bg-neutral-200 active:bg-neutral-300 disabled:opacity-25 disabled:hover:bg-neutral-100 disabled:cursor-not-allowed transition-colors text-neutral-800 flex items-center justify-center cursor-pointer"
-        >
-          <svg
-            className="w-2.5 h-2.5 fill-current"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+      {!hideArrows && (
+        <div className="flex flex-col border border-neutral-200 rounded overflow-hidden bg-neutral-100 shadow-2xs divide-y divide-neutral-200">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={disabled || isFirst}
+            title={isFirst ? "Already at top" : "Move watch up (higher priority)"}
+            aria-label="Move watch up"
+            className="px-1.5 py-0.5 hover:bg-neutral-200 active:bg-neutral-300 disabled:opacity-25 disabled:hover:bg-neutral-100 disabled:cursor-not-allowed transition-colors text-neutral-800 flex items-center justify-center cursor-pointer"
           >
-            <path d="M12 5l-7 8h14z" />
-          </svg>
-        </button>
+            <svg
+              className="w-2.5 h-2.5 fill-current"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M12 5l-7 8h14z" />
+            </svg>
+          </button>
 
-        <button
-          type="button"
-          onClick={onMoveDown}
-          disabled={disabled || isLast}
-          title={isLast ? "Already at bottom" : "Move watch down (lower priority)"}
-          aria-label="Move watch down"
-          className="px-1.5 py-0.5 hover:bg-neutral-200 active:bg-neutral-300 disabled:opacity-25 disabled:hover:bg-neutral-100 disabled:cursor-not-allowed transition-colors text-neutral-800 flex items-center justify-center cursor-pointer"
-        >
-          <svg
-            className="w-2.5 h-2.5 fill-current"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={disabled || isLast}
+            title={isLast ? "Already at bottom" : "Move watch down (lower priority)"}
+            aria-label="Move watch down"
+            className="px-1.5 py-0.5 hover:bg-neutral-200 active:bg-neutral-300 disabled:opacity-25 disabled:hover:bg-neutral-100 disabled:cursor-not-allowed transition-colors text-neutral-800 flex items-center justify-center cursor-pointer"
           >
-            <path d="M12 19l7-8H5z" />
-          </svg>
-        </button>
-      </div>
+            <svg
+              className="w-2.5 h-2.5 fill-current"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M12 19l7-8H5z" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
